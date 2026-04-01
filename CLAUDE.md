@@ -1,103 +1,89 @@
-# SIMAP — Sistema de Movimentação e Acompanhamento Patrimonial
+# CLAUDE.md
 
-## O que é
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-Aplicação web responsiva (mobile-first) da Justiça Federal do Amapá (JFAP) para registro e rastreabilidade de movimentações de bens patrimoniais. Resolve o gap de comunicação entre a TI (que movimenta equipamentos) e a SEMAP (que registra no sistema legado SICAM).
+## What is this
 
-## Stack
+PATRIMOVE (SIMAP) — mobile-first web app for the Justiça Federal do Amapá (JFAP) to track asset movements between organizational units. Bridges the communication gap between IT (who physically moves equipment) and SEMAP (who registers in the legacy SICAM system).
 
-- **Framework:** Next.js 16 + TypeScript strict + App Router
-- **UI:** Tailwind CSS + shadcn/ui (customizado com paleta institucional JF)
-- **Banco:** PostgreSQL 16 via Prisma ORM
-- **Auth:** NextAuth.js v5 com provider LDAP/AD
-- **Scanner:** @zxing/library (Code 128)
-- **E-mail:** Nodemailer (SMTP interno)
-- **Gráficos:** Recharts
-- **Tabelas:** TanStack Table
-- **Validação:** Zod
-- **Testes:** Vitest + Testing Library (unit/integration), Playwright (E2E)
-- **Deploy:** Docker Compose (app + PostgreSQL) em VPS interna
+## Commands
 
-## Estrutura do projeto
-
-```
-app/
-  (auth)/login/           — Login LDAP (sem layout autenticado)
-  (dashboard)/            — Layout autenticado (sidebar + bottom nav)
-    home/                 — Home contextual por perfil
-    movimentacao/         — Nova movimentação, detalhe, histórico
-    patrimonio/           — Meus patrimônios (servidor responsável)
-    backlog/              — Backlog SEMAP
-    importacao/           — Upload CSV + histórico
-    admin/                — CRUD (unidades, setores, responsáveis, perfis)
-    dashboard/            — Dashboard gerencial
-    notificacoes/         — Central de notificações (mobile)
-  confirmar/[token]/      — Página pública de confirmação (sem login)
-components/
-  layout/                 — AppLayout, Sidebar, BottomNav, Header
-  ui/                     — shadcn/ui customizados
-  common/                 — Scanner, EmptyState, StatusBadge, NotificationBell, KPICard
-  views/                  — Componentes específicos de tela
-lib/                      — types.ts, validations.ts, utils.ts, auth.ts
-server/
-  actions/                — Server Actions (mutações)
-  queries/                — Queries de leitura
-  services/               — Email, CSV parser, auditoria
-prisma/                   — Schema, migrations, seed
+```bash
+npm run dev              # Dev server (Turbopack)
+npm run build            # Production build
+npm run lint             # ESLint
+npm run test             # Vitest unit/integration tests
+npm run test:watch       # Vitest in watch mode
+npm run test:e2e         # Playwright E2E tests
+npx vitest run path/to/file.test.ts  # Run a single test file
+npx playwright test e2e/file.spec.ts # Run a single E2E test
+npx prisma migrate dev   # Run migrations
+npx prisma db seed       # Seed test data (via tsx prisma/seed.ts)
+docker compose up -d     # Start PostgreSQL (port 5432, user/pass/db: simap)
 ```
 
-## Comandos
+## Architecture
 
-- `npm run dev` — Dev server
-- `npm run build` — Build de produção
-- `npm run lint` — ESLint
-- `npx prisma migrate dev` — Rodar migrations
-- `npx prisma db seed` — Seed de dados de teste
-- `npm run test` — Testes unitários/integração (Vitest)
-- `npm run test:e2e` — Testes E2E (Playwright)
-- `docker compose up -d` — Subir containers (app + db)
+**Next.js 16 App Router** with two route groups:
+- `(auth)/` — login page, no authenticated layout
+- `(dashboard)/` — all authenticated pages, wrapped in `AppLayout` (sidebar desktop + bottom nav mobile)
+- `confirmar/[token]/` — public confirmation page (no auth required)
 
-## Regras de desenvolvimento
+**Auth flow:** NextAuth v5 with Credentials provider. `middleware.ts` uses edge-compatible `auth.config.ts` (no Prisma). Full auth with Prisma lives in `lib/auth.ts`. Session uses JWT with custom fields: `id`, `matricula`, `nome`, `perfil`.
 
-- IMPORTANT: Sempre use Server Components como default. Use `'use client'` SOMENTE para: Scanner, formulários interativos, bottom sheet, dropdowns com busca, gráficos Recharts, polling de notificações, toasts.
-- IMPORTANT: Toda mutação de dados deve usar Server Actions, NUNCA API Routes.
-- IMPORTANT: Registros de auditoria são imutáveis (somente INSERT, nunca UPDATE ou DELETE).
-- Use `import type` para importação de tipos.
-- Valide TODOS os inputs com Zod — tanto no client quanto no server.
-- Paginação server-side para todas as listagens (20-50 itens por página).
-- Listas com mais de 100 itens devem usar virtualização (react-virtual).
-- Debounce de 300ms em campos de busca.
-- Todas as rotas autenticadas devem ser protegidas por middleware NextAuth.
-- O CSV do SICAM usa encoding Latin-1 e delimitador ponto e vírgula (;).
+**Auth guards:** Use `requireAuth()`/`requireRole()` from `lib/auth-guard.ts` in Server Components (redirects). Use `requireAuthAction()`/`requireRoleAction()` in Server Actions (returns error objects, never throws).
 
-## 4 perfis de usuário
+**Data flow:**
+- **Reads:** `server/queries/` — plain async functions called from Server Components
+- **Writes:** `server/actions/` — Server Actions with `'use server'`, validated with Zod, return `{ success, data?, error? }`
+- **Services:** `server/services/` — email, CSV parser, LDAP, audit logging, notifications
 
-1. **Técnico TI** — Registra movimentações via scanner, importa CSV
-2. **Servidor Responsável** — Confirma saída de tombos, visualiza patrimônios
-3. **Servidor SEMAP** — Processa backlog, registra no SICAM, importa CSV, CRUD admin
-4. **Gestor/Admin** — Dashboard gerencial, CRUD admin completo
+**Prisma:** Generated client outputs to `lib/generated/prisma/`. Schema at `prisma/schema.prisma`. IDs use `cuid()`.
 
-## Identidade visual
+**Navigation:** Profile-based — each of the 4 profiles (`PerfilUsuario` enum) sees different nav items. Defined in `lib/types.ts` (`NAV_ITEMS_BY_PROFILE`). Layout components in `components/layout/`.
 
-- Cor primária: `#003366` (azul institucional JF)
-- Cor secundária: `#2D6E2D` (verde institucional JF)
-- Fundo: `#F2F2F2`, superfícies: `#FFFFFF`
-- Texto: `#333333` (principal), `#666666` (secundário)
+**Components organization:**
+- `components/ui/` — shadcn/ui primitives
+- `components/common/` — shared components (Scanner, StatusBadge, KPICard, EmptyState, Pagination)
+- `components/views/` — page-specific components, including `home/` with per-profile home views
+
+**4 user profiles:** `TECNICO_TI`, `SERVIDOR_RESPONSAVEL`, `SERVIDOR_SEMAP`, `GESTOR_ADMIN`
+
+## Key rules
+
+- **Server Components are the default.** Only use `'use client'` for: scanner, interactive forms, bottom sheet, search dropdowns, Recharts charts, notification polling, toasts.
+- **All mutations via Server Actions**, never API Routes (only exception: `api/auth/[...nextauth]`).
+- **AuditLog is immutable** — INSERT only, never UPDATE or DELETE. No `onDelete: Cascade` on AuditLog relations.
+- **Validate all inputs with Zod** on both client and server.
+- **Server Actions return result objects** `{ success: boolean, data?: T, error?: string }` — never throw for expected errors.
+- **CSV from SICAM** uses Latin-1 encoding and `;` delimiter. Parser must handle this explicitly.
+- **Email sending is fire-and-forget** — never block the user response. Log errors.
+- **Confirmation tokens** generated with `crypto.randomUUID()`, expiry via `TOKEN_EXPIRY_DAYS` env var.
+- **Server-side pagination** for all listings (20-50 items). Virtualize lists > 100 items.
+- **Debounce 300ms** on search fields.
+- Use `import type` for type imports.
+
+## Visual identity
+
+- Primary: `#003366` (blue), Secondary: `#2D6E2D` (green)
+- Background: `#F2F2F2`, Surfaces: `#FFFFFF`
+- Text: `#333333` (primary), `#666666` (secondary)
 - Status badges: Pendente `#D4A017`, Confirmada `#003366`, Registrada SICAM `#2D6E2D`, Erro `#CC3333`
-- Tipografia: Inter (fallback Century Gothic/Calibri)
-- Sem gradientes. Visual limpo e institucional.
+- Font: Inter. No gradients.
 
-## Ondas de entrega
+## Testing
 
-- **Onda 1 (Core):** Auth LDAP, importação CSV, scanner Code 128, registro de movimentação, e-mails SMTP, confirmação pública (token), home técnico, auditoria
-- **Onda 2 (Operacional):** Backlog SEMAP, registro SICAM, meus patrimônios, CRUD admin, notificações in-app, histórico
-- **Onda 3 (Gerencial):** Dashboard KPIs, gráficos Recharts, relatórios auditoria, histórico importações
+- **Vitest** (jsdom): unit tests in `__tests__/` dirs or `*.test.{ts,tsx}` files. Setup in `vitest.setup.ts`. Path alias `@` resolves to project root.
+- **Playwright**: E2E tests in `e2e/` directory.
+- Mock LDAP and SMTP in integration tests — never connect to real services.
+- Test names in Portuguese, descriptive: `it('deve registrar movimentação com múltiplos tombos')`.
 
-## Documentação detalhada
+## Delivery waves
 
-Consulte a pasta `docs/` para especificações completas:
-- @docs/PRD.md — Requisitos de produto
-- @docs/UX_UI.md — Especificações de UX/UI (telas, fluxos, componentes)
-- @docs/MVP.md — Conceito e escopo do MVP
-- @docs/PLANO_DEV.md — Plano de desenvolvimento e roadmap
-- @docs/VISUAL_PROMPT.md — Design tokens, estilos, especificações visuais
+- **Onda 1 (Core):** Auth, CSV import, scanner, movement registration, email notifications, public confirmation, audit
+- **Onda 2 (Operational):** SEMAP backlog, SICAM registration, "my assets" view, admin CRUD, in-app notifications, history
+- **Onda 3 (Managerial):** Dashboard KPIs, Recharts charts, audit reports, CSV import history
+
+## Detailed docs
+
+See `docs/` for full specifications: PRD.md, UX_UI.md, MVP.md, PLANO_DEV.md, VISUAL_PROMPT.md
