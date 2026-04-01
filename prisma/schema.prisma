@@ -1,0 +1,234 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Enums ───────────────────────────────────────────────
+
+enum PerfilUsuario {
+  TECNICO_TI
+  SERVIDOR_RESPONSAVEL
+  SERVIDOR_SEMAP
+  GESTOR_ADMIN
+}
+
+enum StatusMovimentacao {
+  PENDENTE_CONFIRMACAO
+  CONFIRMADA_ORIGEM
+  REGISTRADA_SICAM
+  NAO_CONFIRMADA
+}
+
+enum TipoNotificacao {
+  SAIDA_TOMBO
+  ENTRADA_TOMBO
+  CONFIRMACAO_REALIZADA
+  REGISTRO_SICAM
+  IMPORTACAO_CSV
+}
+
+// ─── Tabelas ─────────────────────────────────────────────
+
+model Unidade {
+  id        String   @id @default(cuid())
+  codigo    String   @unique
+  descricao String
+  ativo     Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  setores                Setor[]
+  servidores             Servidor[]
+  tombos                 Tombo[]
+  movimentacoesOrigem    Movimentacao[] @relation("UnidadeOrigem")
+  movimentacoesDestino   Movimentacao[] @relation("UnidadeDestino")
+}
+
+model Setor {
+  id        String   @id @default(cuid())
+  codigo    String
+  nome      String
+  unidadeId String
+  ativo     Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  unidade Unidade @relation(fields: [unidadeId], references: [id])
+  tombos  Tombo[]
+  movimentacoesOrigem  Movimentacao[] @relation("SetorOrigem")
+  movimentacoesDestino Movimentacao[] @relation("SetorDestino")
+
+  @@unique([codigo, unidadeId])
+  @@index([unidadeId])
+}
+
+model Servidor {
+  id        String   @id @default(cuid())
+  matricula String   @unique
+  nome      String
+  email     String?
+  unidadeId String
+  ativo     Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  unidade           Unidade @relation(fields: [unidadeId], references: [id])
+  tombosResponsavel Tombo[]
+
+  @@index([matricula])
+  @@index([unidadeId])
+}
+
+model Tombo {
+  id                    String   @id @default(cuid())
+  numero                String   @unique
+  descricaoMaterial     String
+  codigoFornecedor      String?
+  nomeFornecedor        String?
+  unidadeId             String?
+  setorId               String?
+  servidorResponsavelId String?
+  saida                 String?
+  ativo                 Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  unidade            Unidade?          @relation(fields: [unidadeId], references: [id])
+  setor              Setor?            @relation(fields: [setorId], references: [id])
+  servidorResponsavel Servidor?        @relation(fields: [servidorResponsavelId], references: [id])
+  itensMovimentacao  ItemMovimentacao[]
+
+  @@index([numero])
+  @@index([unidadeId])
+  @@index([servidorResponsavelId])
+  @@index([setorId])
+  @@index([unidadeId, ativo])
+}
+
+model Usuario {
+  id        String        @id @default(cuid())
+  matricula String        @unique
+  nome      String
+  perfil    PerfilUsuario
+  ativo     Boolean       @default(true)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  movimentacoesTecnico    Movimentacao[]   @relation("TecnicoMovimentacao")
+  movimentacoesRegistro   Movimentacao[]   @relation("RegistroSicam")
+  auditLogs               AuditLog[]
+  notificacoes            Notificacao[]
+  importacoesCSV          ImportacaoCSV[]
+
+  @@index([matricula])
+}
+
+model Movimentacao {
+  id                  String              @id @default(cuid())
+  codigo              String              @unique @default(cuid())
+  unidadeOrigemId     String
+  unidadeDestinoId    String
+  setorOrigemId       String?
+  setorDestinoId      String?
+  tecnicoId           String
+  status              StatusMovimentacao   @default(PENDENTE_CONFIRMACAO)
+  tokenConfirmacao    String              @unique @default(cuid())
+  tokenExpiraEm       DateTime
+  confirmadoEm        DateTime?
+  confirmadoPorNome   String?
+  protocoloSicam      String?
+  dataRegistroSicam   DateTime?
+  observacoesSicam    String?
+  registradoSicamPorId String?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  unidadeOrigem    Unidade            @relation("UnidadeOrigem", fields: [unidadeOrigemId], references: [id])
+  unidadeDestino   Unidade            @relation("UnidadeDestino", fields: [unidadeDestinoId], references: [id])
+  setorOrigem      Setor?             @relation("SetorOrigem", fields: [setorOrigemId], references: [id])
+  setorDestino     Setor?             @relation("SetorDestino", fields: [setorDestinoId], references: [id])
+  tecnico          Usuario            @relation("TecnicoMovimentacao", fields: [tecnicoId], references: [id])
+  registradoSicamPor Usuario?         @relation("RegistroSicam", fields: [registradoSicamPorId], references: [id])
+  itens            ItemMovimentacao[]
+
+  @@index([status])
+  @@index([tokenConfirmacao])
+  @@index([createdAt])
+  @@index([unidadeOrigemId])
+  @@index([unidadeDestinoId])
+  @@index([setorOrigemId])
+  @@index([setorDestinoId])
+  @@index([tecnicoId])
+  @@index([registradoSicamPorId])
+  @@index([status, createdAt(sort: Desc)])
+  @@index([unidadeOrigemId, status])
+}
+
+model ItemMovimentacao {
+  id              String   @id @default(cuid())
+  movimentacaoId  String
+  tomboId         String
+  createdAt       DateTime @default(now())
+
+  movimentacao Movimentacao @relation(fields: [movimentacaoId], references: [id], onDelete: Cascade)
+  tombo        Tombo        @relation(fields: [tomboId], references: [id])
+
+  @@unique([movimentacaoId, tomboId])
+  @@index([movimentacaoId])
+  @@index([tomboId])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  acao       String
+  entidade   String
+  entidadeId String
+  usuarioId  String?
+  detalhes   Json?
+  createdAt  DateTime @default(now())
+
+  usuario Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+
+  @@index([entidade, entidadeId])
+  @@index([usuarioId])
+  @@index([createdAt])
+}
+
+model Notificacao {
+  id                String          @id @default(cuid())
+  tipo              TipoNotificacao
+  titulo            String
+  mensagem          String
+  link              String?
+  usuarioDestinoId  String
+  lida              Boolean         @default(false)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  usuarioDestino Usuario @relation(fields: [usuarioDestinoId], references: [id])
+
+  @@index([usuarioDestinoId])
+  @@index([lida])
+  @@index([createdAt])
+  @@index([usuarioDestinoId, lida])
+}
+
+model ImportacaoCSV {
+  id             String   @id @default(cuid())
+  nomeArquivo    String
+  totalRegistros Int
+  novos          Int
+  atualizados    Int
+  erros          Int
+  importadoPorId String
+  createdAt      DateTime @default(now())
+
+  importadoPor Usuario @relation(fields: [importadoPorId], references: [id])
+
+  @@index([importadoPorId])
+  @@index([createdAt])
+}

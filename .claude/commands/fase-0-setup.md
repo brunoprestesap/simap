@@ -1,6 +1,6 @@
 # Fase 0 — Setup & Fundação
 
-Inicialize o projeto PATRIMOVE do zero. Siga as specs em @CLAUDE.md e consulte @docs/VISUAL_PROMPT.md para design tokens.
+Inicialize o projeto SIMAP do zero. Siga as specs em @CLAUDE.md e consulte @docs/VISUAL_PROMPT.md para design tokens.
 
 ## Tarefas (executar em ordem)
 
@@ -80,7 +80,7 @@ Crie o layout base da aplicação seguindo @docs/VISUAL_PROMPT.md (Módulos 2 e 
 
 **components/layout/Sidebar.tsx** — Sidebar desktop:
 - Fundo #003366, largura 240px (expandida) / 64px (colapsada)
-- Logo PATRIMOVE no topo
+- Logo SIMAP no topo
 - Itens de navegação com ícones lucide-react e labels (brancos)
 - Item ativo com fundo branco 15% opacidade
 - Avatar + nome do usuário na parte inferior

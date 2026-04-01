@@ -1,18 +1,18 @@
 services:
   db:
     image: postgres:16-alpine
-    container_name: patrimove-db
+    container_name: simap-db
     restart: unless-stopped
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_USER: patrimove
-      POSTGRES_PASSWORD: patrimove
-      POSTGRES_DB: patrimove
+      POSTGRES_USER: simap
+      POSTGRES_PASSWORD: simap
+      POSTGRES_DB: simap
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U patrimove"]
+      test: ["CMD-SHELL", "pg_isready -U simap"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -21,7 +21,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: patrimove-app
+    container_name: simap-app
     restart: unless-stopped
     ports:
       - "3000:3000"

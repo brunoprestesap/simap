@@ -1,4 +1,4 @@
-# PATRIMOVE — Sistema de Controle de Movimentações Patrimoniais
+# SIMAP — Sistema de Movimentação e Acompanhamento Patrimonial
 
 ## O que é
 

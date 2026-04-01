@@ -1,6 +1,6 @@
 # Onda 2 — Operacional (SEMAP + Patrimônios + Admin)
 
-Implemente as funcionalidades operacionais do PATRIMOVE. A Onda 1 já está completa. Consulte @CLAUDE.md e @docs/VISUAL_PROMPT.md.
+Implemente as funcionalidades operacionais do SIMAP. A Onda 1 já está completa. Consulte @CLAUDE.md e @docs/VISUAL_PROMPT.md.
 
 ## Tarefas (executar em ordem)
 

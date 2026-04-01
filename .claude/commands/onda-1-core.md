@@ -1,6 +1,6 @@
 # Onda 1 — Core (Registro + Comunicação)
 
-Implemente o fluxo principal do PATRIMOVE. Consulte @CLAUDE.md para regras e @docs/VISUAL_PROMPT.md para design. O domínio está em .claude/skills/patrimove-domain/SKILL.md.
+Implemente o fluxo principal do SIMAP. Consulte @CLAUDE.md para regras e @docs/VISUAL_PROMPT.md para design. O domínio está em .claude/skills/patrimove-domain/SKILL.md.
 
 ## Tarefas (executar em ordem)
 
@@ -8,7 +8,7 @@ Implemente o fluxo principal do PATRIMOVE. Consulte @CLAUDE.md para regras e @do
 - Configure NextAuth v5 em `lib/auth.ts` com provider Credentials que valida contra LDAP
 - Crie o middleware em `middleware.ts` que protege todas as rotas em `/(dashboard)` e redireciona para `/login` se não autenticado
 - A sessão JWT deve conter: id, matricula, nome, perfil (PerfilUsuario)
-- Crie `app/(auth)/login/page.tsx`: card centralizado com logo JF + PATRIMOVE, campos matrícula e senha, botão "Entrar", estados (inicial, carregando com spinner, erro credenciais, erro LDAP). Veja specs em @docs/VISUAL_PROMPT.md Seção 9.1
+- Crie `app/(auth)/login/page.tsx`: card centralizado com logo JF + SIMAP, campos matrícula e senha, botão "Entrar", estados (inicial, carregando com spinner, erro credenciais, erro LDAP). Veja specs em @docs/VISUAL_PROMPT.md Seção 9.1
 - Para desenvolvimento local, crie um provider de fallback que autentica contra os usuários do seed (sem LDAP real)
 - Após login, redirecione para a home conforme o perfil: Técnico→/home, Responsável→/patrimonio, SEMAP→/backlog, Gestor→/dashboard
 
@@ -62,7 +62,7 @@ Implemente o fluxo principal do PATRIMOVE. Consulte @CLAUDE.md para regras e @do
 - Crie `app/confirmar/[token]/page.tsx`: conforme @docs/VISUAL_PROMPT.md Seção 9.6
   - Server Component que busca a movimentação pelo token
   - Estados: token válido (exibe dados), token expirado (mensagem "Este link expirou"), já confirmado (mensagem com data/hora)
-  - Layout público: header simples com logo PATRIMOVE, sem sidebar/nav
+  - Layout público: header simples com logo SIMAP, sem sidebar/nav
   - Card com: lista de tombos, origem → destino, técnico, data
   - Botão "Confirmar Saída" → modal de confirmação ("Você confirma a saída de N tombos?")
   - Server Action de confirmação: atualiza status para CONFIRMADA_ORIGEM, registra confirmadoEm e confirmadoPorNome, cria AuditLog, cria Notificacao para técnico

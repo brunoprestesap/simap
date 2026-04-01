@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Shield -->
+  <path d="M32 4L8 16v18c0 14 10 27 24 30 14-3 24-16 24-30V16L32 4z" fill="#003366"/>
+  <path d="M32 9L12 19v15c0 12 8.5 23.5 20 26 11.5-2.5 20-14 20-26V19L32 9z" fill="white"/>
+
+  <!-- Simplified barcode -->
+  <rect x="20" y="22" width="2" height="14" fill="#003366"/>
+  <rect x="24" y="22" width="3" height="14" fill="#003366"/>
+  <rect x="29" y="22" width="1.5" height="14" fill="#003366"/>
+  <rect x="33" y="22" width="2.5" height="14" fill="#003366"/>
+  <rect x="38" y="22" width="1.5" height="14" fill="#003366"/>
+  <rect x="42" y="22" width="2" height="14" fill="#003366"/>
+
+  <!-- Circular arrows -->
+  <path d="M24 46a9 9 0 0 1 15.4-6.4" stroke="#2D6E2D" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+  <polygon points="40,38 37.5,42.5 35.5,38" fill="#2D6E2D"/>
+  <path d="M40 46a9 9 0 0 1-15.4 6.4" stroke="#2D6E2D" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+  <polygon points="24,54 26.5,49.5 28.5,54" fill="#2D6E2D"/>
+</svg>
