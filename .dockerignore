@@ -1,0 +1,13 @@
+node_modules
+.next
+.git
+certs
+*.pem
+.env*
+!.env
+.vercel
+coverage
+e2e
+__tests__
+docs
+.claude

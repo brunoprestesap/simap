@@ -1,0 +1,19 @@
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: simap-caddy
+    restart: unless-stopped
+    ports:
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./certs:/etc/caddy/certs:ro
+    depends_on:
+      - app
+
+  app:
+    environment:
+      - DATABASE_URL=postgresql://simap:simap@db:5432/simap?schema=public
+      - NEXTAUTH_URL=https://192.168.100.228
+      - APP_URL=https://192.168.100.228
+      - AUTH_TRUST_HOST=true

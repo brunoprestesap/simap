@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useId } from "react";
 import { Camera, CameraOff, Loader2, Zap, ZapOff } from "lucide-react";
-import { BarcodeDetector } from "barcode-detector/ponyfill";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -18,18 +17,24 @@ interface ScannerProps {
 // Constants
 // ---------------------------------------------------------------------------
 
+/**
+ * Html5QrcodeSupportedFormats numeric values (avoids top-level import of
+ * html5-qrcode which accesses `document` and breaks SSR).
+ */
 const BARCODE_FORMATS = [
-  "code_128",
-  "code_39",
-  "code_93",
-  "itf",
-  "codabar",
-] as const;
+  5,  // CODE_128
+  3,  // CODE_39
+  4,  // CODE_93
+  8,  // ITF
+  2,  // CODABAR
+  9,  // EAN_13
+  10, // EAN_8
+];
 
 /** Minimum consecutive reads of the same code to accept as valid */
-const CONFIRM_THRESHOLD = 3;
+const CONFIRM_THRESHOLD = 2;
 /** Time window for consecutive reads (ms) */
-const CONFIRM_WINDOW_MS = 1500;
+const CONFIRM_WINDOW_MS = 2000;
 /** Debounce between accepted scans of the same code (ms) */
 const SCAN_COOLDOWN_MS = 2500;
 
@@ -58,6 +63,14 @@ function friendlyError(err: unknown): string {
         return "A câmera não suporta a resolução solicitada.";
     }
   }
+  if (err instanceof Error && err.message) {
+    if (err.message.includes("Permission")) {
+      return "Permissão de câmera negada. Acesse Ajustes > Safari > Câmera e permita o acesso.";
+    }
+    if (err.message.includes("not found") || err.message.includes("No camera")) {
+      return "Nenhuma câmera encontrada neste dispositivo.";
+    }
+  }
   return "Não foi possível acessar a câmera.";
 }
 
@@ -66,7 +79,9 @@ function friendlyError(err: unknown): string {
 // ---------------------------------------------------------------------------
 
 export function Scanner({ onScan, onError, active = true }: ScannerProps) {
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const reactId = useId();
+  const containerIdRef = useRef(`scanner-reader-${reactId.replace(/:/g, "")}`);
+
   const onScanRef = useRef(onScan);
   const onErrorRef = useRef(onError);
 
@@ -87,8 +102,8 @@ export function Scanner({ onScan, onError, active = true }: ScannerProps) {
     code: "",
     at: 0,
   });
-  const streamRef = useRef<MediaStream | null>(null);
-  const rafRef = useRef<number>(0);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const scannerRef = useRef<any>(null);
 
   // Keep callback refs fresh
   useEffect(() => {
@@ -135,8 +150,14 @@ export function Scanner({ onScan, onError, active = true }: ScannerProps) {
   // Torch toggle
   // --------------------------------------------------
   const toggleTorch = useCallback(async () => {
-    const track = streamRef.current?.getVideoTracks()[0];
+    const containerId = containerIdRef.current;
+    const videoEl = document.getElementById(containerId)?.querySelector("video");
+    const stream = videoEl?.srcObject;
+    if (!(stream instanceof MediaStream)) return;
+
+    const track = stream.getVideoTracks()[0];
     if (!track) return;
+
     const next = !torchOn;
     try {
       await track.applyConstraints({
@@ -155,38 +176,47 @@ export function Scanner({ onScan, onError, active = true }: ScannerProps) {
     if (!active) return;
 
     let cancelled = false;
-    const desktop = isDesktop();
+    const containerId = containerIdRef.current;
 
     async function start() {
-      // 1. Acquire camera stream
-      const constraints: MediaStreamConstraints = {
-        video: desktop
-          ? {
-              facingMode: "user",
-              width: { ideal: 1280 },
-              height: { ideal: 720 },
-            }
-          : {
-              facingMode: { ideal: "environment" },
-              width: { ideal: 1920, min: 1280 },
-              height: { ideal: 1080, min: 720 },
-              // @ts-expect-error — focusMode is supported on Android Chrome
-              focusMode: { ideal: "continuous" },
-              frameRate: { ideal: 30, max: 30 },
-            },
-        audio: false,
+      // Dynamic import to avoid SSR issues (html5-qrcode accesses document at import time)
+      const { Html5Qrcode } = await import("html5-qrcode");
+
+      if (cancelled) return;
+
+      const html5QrCode = new Html5Qrcode(containerId, {
+        formatsToSupport: BARCODE_FORMATS,
+        verbose: false,
+      });
+      scannerRef.current = html5QrCode;
+
+      const desktop = isDesktop();
+      const cameraConfig = desktop
+        ? { facingMode: "user" as const }
+        : { facingMode: "environment" as const };
+
+      const scanConfig = {
+        fps: 4,
+        qrbox: { width: 280, height: 120 },
+        aspectRatio: desktop ? 16 / 9 : undefined,
+        disableFlip: false,
       };
 
-      let stream: MediaStream;
+      const onSuccess = (decodedText: string) => {
+        if (!cancelled) tryAccept(decodedText);
+      };
+
       try {
-        stream = await navigator.mediaDevices.getUserMedia(constraints);
+        await html5QrCode.start(cameraConfig, scanConfig, onSuccess, undefined);
       } catch {
-        // Retry with relaxed constraints (some old devices reject min)
+        // Retry with relaxed constraints (some devices reject specific facingMode)
         try {
-          stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: desktop ? "user" : "environment" },
-            audio: false,
-          });
+          await html5QrCode.start(
+            { facingMode: "environment" as const },
+            { fps: 4, qrbox: { width: 280, height: 120 }, disableFlip: false },
+            onSuccess,
+            undefined
+          );
         } catch (err2) {
           if (cancelled) return;
           const msg = friendlyError(err2);
@@ -198,63 +228,37 @@ export function Scanner({ onScan, onError, active = true }: ScannerProps) {
       }
 
       if (cancelled) {
-        stream.getTracks().forEach((t) => t.stop());
+        html5QrCode.stop().catch(() => {});
         return;
       }
 
-      streamRef.current = stream;
-
-      // Check torch capability
-      const track = stream.getVideoTracks()[0];
-      const caps = track.getCapabilities?.();
-      if (caps && "torch" in caps) {
-        setHasTorch(true);
-      }
-
-      // 2. Attach stream to <video>
-      const video = videoRef.current;
-      if (!video) return;
-      video.srcObject = stream;
-      await video.play();
-      if (cancelled) return;
       setStatus("ready");
 
-      // 3. Start scan loop using BarcodeDetector (native or ZXing WASM polyfill)
-      const detector = new BarcodeDetector({
-        formats: [...BARCODE_FORMATS],
-      });
-      let scanning = false;
-
-      const tick = async () => {
-        if (cancelled) return;
-        if (
-          !scanning &&
-          video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA
-        ) {
-          scanning = true;
-          try {
-            const results = await detector.detect(video);
-            if (results.length > 0 && results[0].rawValue) {
-              tryAccept(results[0].rawValue);
-            }
-          } catch {
-            // frame not ready or decode error, skip
+      // Check torch capability from the running video track
+      try {
+        const videoEl = document.getElementById(containerId)?.querySelector("video");
+        const stream = videoEl?.srcObject;
+        if (stream instanceof MediaStream) {
+          const track = stream.getVideoTracks()[0];
+          const caps = track?.getCapabilities?.();
+          if (caps && "torch" in caps) {
+            setHasTorch(true);
           }
-          scanning = false;
         }
-        rafRef.current = requestAnimationFrame(tick);
-      };
-
-      rafRef.current = requestAnimationFrame(tick);
+      } catch {
+        // no torch support
+      }
     }
 
     start();
 
     return () => {
       cancelled = true;
-      cancelAnimationFrame(rafRef.current);
-      streamRef.current?.getTracks().forEach((t) => t.stop());
-      streamRef.current = null;
+      const instance = scannerRef.current;
+      if (instance) {
+        instance.stop().catch(() => {});
+        scannerRef.current = null;
+      }
       setTorchOn(false);
       setHasTorch(false);
       setStatus("loading");
@@ -286,13 +290,10 @@ export function Scanner({ onScan, onError, active = true }: ScannerProps) {
   // --------------------------------------------------
   return (
     <div className="relative h-full w-full overflow-hidden rounded-lg border border-border bg-black">
-      {/* Video element — managed directly */}
-      <video
-        ref={videoRef}
-        className="h-full w-full object-cover"
-        autoPlay
-        playsInline
-        muted
+      {/* Container for html5-qrcode — library creates <video> inside */}
+      <div
+        id={containerIdRef.current}
+        className="h-full w-full [&_video]:!h-full [&_video]:!w-full [&_video]:!object-cover [&_video]:!static [&>div]:!border-none [&_canvas]:!hidden [&>div>img]:!hidden"
       />
 
       {/* Loading overlay */}

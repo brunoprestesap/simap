@@ -1,8 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  allowedDevOrigins: ["192.168.100.228"],
   output: "standalone",
+  allowedDevOrigins: ["192.168.100.228"],
   serverExternalPackages: ["pg", "@prisma/adapter-pg"],
   experimental: {
     serverActions: {

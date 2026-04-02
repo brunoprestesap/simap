@@ -1,0 +1,8 @@
+{
+	auto_https off
+}
+
+:443 {
+	tls /etc/caddy/certs/local.pem /etc/caddy/certs/local-key.pem
+	reverse_proxy app:3000
+}
