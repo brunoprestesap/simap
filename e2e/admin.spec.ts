@@ -2,22 +2,27 @@ import { test, expect } from "@playwright/test";
 
 test.describe("Admin CRUD", () => {
   test.beforeEach(async ({ page }) => {
-    // Login as GESTOR_ADMIN
+    // Login como GESTOR_ADMIN (seed: AP20159)
     await page.goto("/login");
-    await page.fill('input[name="matricula"]', "ADMIN001");
+    await page.fill('input[name="matricula"]', "AP20159");
     await page.fill('input[name="senha"]', "senha123");
     await page.click('button[type="submit"]');
-    await page.waitForURL("/dashboard");
+    await page.waitForURL("/home", { timeout: 15_000 });
+    await page.goto("/admin/unidades");
+    await page.waitForURL("/admin/unidades");
   });
 
   test("deve navegar para admin e exibir tabs", async ({ page }) => {
     await page.goto("/admin");
     await expect(page).toHaveURL("/admin/unidades");
-    await expect(page.locator("text=Administração")).toBeVisible();
-    await expect(page.locator("text=Unidades")).toBeVisible();
-    await expect(page.locator("text=Setores")).toBeVisible();
-    await expect(page.locator("text=Responsáveis")).toBeVisible();
-    await expect(page.locator("text=Perfis")).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Administração" }),
+    ).toBeVisible();
+    const nav = page.locator("nav").filter({ has: page.getByRole("link") });
+    await expect(nav.getByRole("link", { name: "Unidades" })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "Setores" })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "Responsáveis" })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "Perfis" })).toBeVisible();
   });
 
   test("deve criar nova unidade", async ({ page }) => {
@@ -71,17 +76,15 @@ test.describe("Admin CRUD", () => {
 
   test("deve navegar entre tabs admin", async ({ page }) => {
     await page.goto("/admin/unidades");
+    const nav = page.locator("nav").filter({ has: page.getByRole("link") });
 
-    // Navigate to Setores
-    await page.click("text=Setores");
+    await nav.getByRole("link", { name: "Setores" }).click();
     await expect(page).toHaveURL("/admin/setores");
 
-    // Navigate to Responsáveis
-    await page.click("text=Responsáveis");
+    await nav.getByRole("link", { name: "Responsáveis" }).click();
     await expect(page).toHaveURL("/admin/responsaveis");
 
-    // Navigate to Perfis
-    await page.click("text=Perfis");
+    await nav.getByRole("link", { name: "Perfis" }).click();
     await expect(page).toHaveURL("/admin/perfis");
   });
 });

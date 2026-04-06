@@ -2,12 +2,14 @@ import { test, expect } from "@playwright/test";
 
 test.describe("Backlog SEMAP", () => {
   test.beforeEach(async ({ page }) => {
-    // Login as SERVIDOR_SEMAP
+    // SERVIDOR_SEMAP no seed: AP20157
     await page.goto("/login");
-    await page.fill('input[name="matricula"]', "SEMAP001");
+    await page.fill('input[name="matricula"]', "AP20157");
     await page.fill('input[name="senha"]', "senha123");
     await page.click('button[type="submit"]');
-    await page.waitForURL("/backlog");
+    await page.waitForURL("/home", { timeout: 15_000 });
+    await page.goto("/backlog");
+    await page.waitForURL("/backlog", { timeout: 15_000 });
   });
 
   test("deve exibir página de backlog com filtros", async ({ page }) => {
@@ -16,18 +18,18 @@ test.describe("Backlog SEMAP", () => {
   });
 
   test("deve filtrar por status", async ({ page }) => {
-    // Open filters
-    await page.click("text=Filtros");
-    // Select status
-    await page.selectOption('select[aria-label="Status"]', "CONFIRMADA_ORIGEM");
-    // Verify URL has filter
+    await page.getByRole("button", { name: /Filtros/i }).click();
+    const statusSelect = page.locator("div.rounded-lg.border.border-border.bg-card.p-4").getByRole("combobox").first();
+    await statusSelect.selectOption("CONFIRMADA_ORIGEM");
     await expect(page).toHaveURL(/status=CONFIRMADA_ORIGEM/);
   });
 
   test("deve limpar filtros", async ({ page }) => {
-    await page.click("text=Filtros");
-    await page.selectOption("select", { index: 1 });
-    await page.click("text=Limpar filtros");
+    await page.getByRole("button", { name: /Filtros/i }).click();
+    const statusSelect = page.locator("div.rounded-lg.border.border-border.bg-card.p-4").getByRole("combobox").first();
+    await statusSelect.selectOption("CONFIRMADA_ORIGEM");
+    await expect(page).toHaveURL(/status=CONFIRMADA_ORIGEM/);
+    await page.getByRole("button", { name: /Limpar filtros/i }).click();
     await expect(page).toHaveURL("/backlog");
   });
 
@@ -35,24 +37,26 @@ test.describe("Backlog SEMAP", () => {
     // Wait for list to load
     await page.waitForSelector("[data-testid='backlog-list']", { timeout: 5000 }).catch(() => {});
 
-    // Look for a "Registrar no SICAM" button
-    const registerButton = page.locator("text=Registrar no SICAM").first();
+    const registerButton = page.getByRole("button", { name: "Registrar no SICAM" }).first();
     if (await registerButton.isVisible()) {
       await registerButton.click();
-      await expect(page.locator("text=Registrar no SICAM")).toBeVisible();
+      await expect(
+        page.getByRole("heading", { name: "Registrar no SICAM" }),
+      ).toBeVisible();
       await expect(page.locator("#protocolo")).toBeVisible();
       await expect(page.locator("#dataRegistro")).toBeVisible();
     }
   });
 
   test("deve registrar movimentação no SICAM com sucesso", async ({ page }) => {
-    const registerButton = page.locator("text=Registrar no SICAM").first();
+    const registerButton = page.getByRole("button", { name: "Registrar no SICAM" }).first();
     if (await registerButton.isVisible().catch(() => false)) {
       await registerButton.click();
 
-      // Fill form
+      // Data do registro: respeitar max=hoje do input date
+      const hoje = new Date().toISOString().split("T")[0];
       await page.fill("#protocolo", "2024/TEST001");
-      await page.fill("#dataRegistro", "2024-06-15");
+      await page.fill("#dataRegistro", hoje);
       await page.fill("#observacoes", "Registro de teste E2E");
 
       // Submit

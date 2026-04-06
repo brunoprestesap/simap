@@ -46,11 +46,12 @@ test.describe("Nova Movimentação", () => {
   }) => {
     await page.goto("/movimentacao/nova");
 
-    // Camera likely not available in CI, but manual mode should be available
-    await expect(page.getByText("Digitar manualmente")).toBeVisible({
-      timeout: 10000,
+    await expect(page.getByRole("button", { name: "Scanner" })).toBeVisible({
+      timeout: 10_000,
     });
-    await expect(page.getByText("Tombos escaneados")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Manual" })).toBeVisible();
+    await expect(page.getByText("Captura de Tombos")).toBeVisible();
+    await expect(page.getByText("Lote Atual")).toBeVisible();
   });
 
   test("deve adicionar tombo manualmente e avançar", async ({ page }) => {
@@ -59,25 +60,18 @@ test.describe("Nova Movimentação", () => {
 
     expect(tomboDisponivel).toBeTruthy();
 
-    // Switch to manual mode
-    await page.getByText("Digitar manualmente").click();
+    await page.getByRole("button", { name: "Manual" }).click();
 
-    // Type a tombo number available in the current database state
     await page.getByPlaceholder("Nº do tombo").fill(tomboDisponivel!);
-    await page.getByRole("button").filter({ hasText: "" }).last().click();
+    await page.getByRole("button", { name: "Adicionar" }).click();
 
-    // Should show the tombo in the list
-    await expect(page.getByText(tomboDisponivel!)).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText("1 tombo")).toBeVisible();
+    await expect(page.getByText(tomboDisponivel!, { exact: true })).toBeVisible({ timeout: 10_000 });
 
-    // Advance button should be enabled
     const avancarBtn = page.getByRole("button", { name: "Avançar" });
     await expect(avancarBtn).toBeEnabled();
     await avancarBtn.click();
 
-    await expect(
-      page.getByRole("heading", { name: "Confirmar Movimentação" }),
-    ).toBeVisible();
-    await expect(page.getByText("Tombos selecionados (1)")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Confirmar Destino" })).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("Tombos a Movimentar")).toBeVisible({ timeout: 5_000 });
   });
 });

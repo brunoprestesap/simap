@@ -10,12 +10,12 @@ const CSV_CONTENT =
 
 test.describe("Importação CSV", () => {
   test.beforeEach(async ({ page }) => {
-    // Login as technician
+    // Login como GESTOR_ADMIN (seed: AP20159)
     await page.goto("/login");
-    await page.getByLabel("Matrícula").fill("AP20151");
-    await page.getByLabel("Senha").fill("qualquer");
-    await page.getByRole("button", { name: "Entrar" }).click();
-    await page.waitForURL(/\/(home|movimentacao)/, { timeout: 10000 });
+    await page.fill('input[name="matricula"]', "AP20159");
+    await page.fill('input[name="senha"]', "senha123");
+    await page.click('button[type="submit"]');
+    await page.waitForURL("/home", { timeout: 15_000 });
   });
 
   test("deve fazer upload e preview de CSV", async ({ page }) => {
@@ -41,6 +41,6 @@ test.describe("Importação CSV", () => {
 
     // Cleanup
     fs.unlinkSync(csvPath);
-    fs.rmdirSync(tmpDir, { recursive: true });
+    fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 });

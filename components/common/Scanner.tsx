@@ -50,6 +50,16 @@ function isDesktop(): boolean {
   );
 }
 
+/** html5-qrcode throws or rejects if stop() runs before start() finished */
+async function safeStopScanner(instance: { stop: () => Promise<void> } | null) {
+  if (!instance) return;
+  try {
+    await instance.stop();
+  } catch {
+    /* scanner not running yet, already stopped, or unmount race */
+  }
+}
+
 function friendlyError(err: unknown): string {
   if (err instanceof DOMException) {
     switch (err.name) {
@@ -228,7 +238,7 @@ export function Scanner({ onScan, onError, active = true }: ScannerProps) {
       }
 
       if (cancelled) {
-        html5QrCode.stop().catch(() => {});
+        await safeStopScanner(html5QrCode);
         return;
       }
 
@@ -256,7 +266,7 @@ export function Scanner({ onScan, onError, active = true }: ScannerProps) {
       cancelled = true;
       const instance = scannerRef.current;
       if (instance) {
-        instance.stop().catch(() => {});
+        void safeStopScanner(instance);
         scannerRef.current = null;
       }
       setTorchOn(false);

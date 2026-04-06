@@ -4,7 +4,7 @@ import { EmptyState } from "@/components/common/EmptyState";
 import { formatDateTimeBR } from "@/lib/format";
 
 export default async function HistoricoImportacoesPage() {
-  await requireRole(["TECNICO_TI", "SERVIDOR_SEMAP"]);
+  await requireRole(["GESTOR_ADMIN"]);
 
   const importacoes = await listarHistoricoImportacoes();
 

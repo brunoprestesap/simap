@@ -3,6 +3,13 @@ import Credentials from "next-auth/providers/credentials";
 import { prisma } from "@/lib/prisma";
 import { authConfig } from "@/lib/auth.config";
 import type { PerfilUsuario } from "@/lib/generated/prisma/client";
+import { Prisma } from "@/lib/generated/prisma/client";
+import {
+  authenticateLdap,
+  getLdapDefaultProvisionPerfil,
+  isLdapConfigured,
+  warnDevIfLdapDisabled,
+} from "@/lib/ldap";
 export { getHomeByPerfil } from "@/lib/profile-home";
 
 declare module "next-auth" {
@@ -45,15 +52,95 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           const rawMatricula = credentials?.matricula as string | undefined;
           const senha = credentials?.senha as string | undefined;
 
-          if (!rawMatricula || !senha) return null;
+          if (!rawMatricula || !senha) {
+            if (process.env.NODE_ENV === "development") {
+              console.warn("[AUTH] authorize: matricula ou senha vazios");
+            }
+            return null;
+          }
+
+          warnDevIfLdapDisabled();
 
           const matricula = rawMatricula.trim().toUpperCase();
 
-          const usuario = await prisma.usuario.findFirst({
-            where: { matricula, ativo: true },
+          let ldapDisplayName: string | null = null;
+
+          if (isLdapConfigured()) {
+            const ldap = await authenticateLdap(matricula, senha);
+            if (!ldap.ok) {
+              return null;
+            }
+            ldapDisplayName = ldap.displayName;
+          }
+
+          let usuario = await prisma.usuario.findUnique({
+            where: { matricula },
           });
 
-          if (!usuario) return null;
+          if (!usuario) {
+            if (!isLdapConfigured()) {
+              if (process.env.NODE_ENV === "development") {
+                console.warn(
+                  "[AUTH] sem LDAP: usuário deve existir na base (seed ou cadastro manual):",
+                  matricula,
+                );
+              }
+              return null;
+            }
+
+            const servidor = await prisma.servidor.findUnique({
+              where: { matricula },
+              select: { nome: true },
+            });
+
+            const nome =
+              ldapDisplayName?.trim() || servidor?.nome || matricula;
+            const perfil = getLdapDefaultProvisionPerfil();
+
+            try {
+              usuario = await prisma.usuario.create({
+                data: {
+                  matricula,
+                  nome,
+                  perfil,
+                  ativo: true,
+                },
+              });
+              if (process.env.NODE_ENV === "development") {
+                console.info(
+                  "[AUTH] Usuario provisionado no primeiro login:",
+                  matricula,
+                  perfil,
+                );
+              }
+            } catch (e) {
+              if (
+                e instanceof Prisma.PrismaClientKnownRequestError &&
+                e.code === "P2002"
+              ) {
+                usuario = await prisma.usuario.findUnique({
+                  where: { matricula },
+                });
+              } else {
+                console.error("[AUTH] Erro ao provisionar usuario:", e);
+                return null;
+              }
+            }
+          }
+
+          if (!usuario) {
+            return null;
+          }
+
+          if (!usuario.ativo) {
+            if (process.env.NODE_ENV === "development") {
+              console.warn(
+                "[AUTH] authorize: usuário existe mas está inativo:",
+                matricula,
+              );
+            }
+            return null;
+          }
 
           return {
             id: usuario.id,

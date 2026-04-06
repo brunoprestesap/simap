@@ -1,17 +1,13 @@
 import {
-  Bell,
   ClipboardList,
-  History,
   Monitor,
   Settings,
-  Upload,
 } from "lucide-react";
-import { formatDateTimeBR, formatRelativeTime } from "@/lib/format";
+import { formatDateTimeBR } from "@/lib/format";
 import type { getSemapHomeData } from "@/server/queries/home";
 import {
   HomeActionsGrid,
   HomeHero,
-  HomePanel,
   MovementPreviewList,
   NotificationPreviewList,
   formatTempoMedioDias,
@@ -36,10 +32,6 @@ export function SemapHome({ firstName, data }: SemapHomeProps) {
           href: "/backlog",
           label: "Abrir backlog",
           icon: ClipboardList,
-        }}
-        secondaryAction={{
-          href: "/importacao",
-          label: "Importar CSV",
         }}
       />
 
@@ -90,18 +82,6 @@ export function SemapHome({ firstName, data }: SemapHomeProps) {
             icon: Monitor,
           },
           {
-            href: "/importacao",
-            title: "Importar CSV",
-            description: "Atualize a base legada com um novo arquivo do SICAM.",
-            icon: Upload,
-          },
-          {
-            href: "/importacao/historico",
-            title: "Histórico de importações",
-            description: "Revise cargas anteriores e seus resultados.",
-            icon: History,
-          },
-          {
             href: "/admin/unidades",
             title: "Administração",
             description: "Acesse rapidamente os cadastros operacionais.",
@@ -143,56 +123,6 @@ export function SemapHome({ firstName, data }: SemapHomeProps) {
             unreadCount={data.notificacoesNaoLidas}
             action={{ href: "/notificacoes", label: "Ver todas" }}
           />
-
-          <HomePanel
-            title="Última importação CSV"
-            description="Resumo da sua carga mais recente no sistema."
-            action={{ href: "/importacao/historico", label: "Ver histórico" }}
-          >
-            {data.ultimaImportacao ? (
-              <div className="space-y-4">
-                <div>
-                  <p className="text-sm font-semibold text-foreground">
-                    {data.ultimaImportacao.nomeArquivo}
-                  </p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Importado {formatDateTimeBR(data.ultimaImportacao.createdAt)}
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="rounded-lg border border-border bg-background p-3">
-                    <p className="text-xs font-medium text-muted-foreground">Novos</p>
-                    <p className="mt-1 text-lg font-semibold text-secondary">
-                      {data.ultimaImportacao.novos}
-                    </p>
-                  </div>
-                  <div className="rounded-lg border border-border bg-background p-3">
-                    <p className="text-xs font-medium text-muted-foreground">Atualizados</p>
-                    <p className="mt-1 text-lg font-semibold text-primary">
-                      {data.ultimaImportacao.atualizados}
-                    </p>
-                  </div>
-                  <div className="rounded-lg border border-border bg-background p-3">
-                    <p className="text-xs font-medium text-muted-foreground">Erros</p>
-                    <p className="mt-1 text-lg font-semibold text-destructive">
-                      {data.ultimaImportacao.erros}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="rounded-lg border border-dashed border-border px-4 py-6 text-center">
-                <Bell className="mx-auto h-5 w-5 text-muted-foreground" />
-                <p className="mt-3 text-sm font-medium text-foreground">
-                  Nenhuma importação recente
-                </p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Quando houver nova carga do SICAM, o resumo aparecerá aqui.
-                </p>
-              </div>
-            )}
-          </HomePanel>
         </div>
       </div>
     </div>

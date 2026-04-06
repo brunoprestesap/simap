@@ -1,6 +1,6 @@
 "use server";
 
-import { requireAuthAction } from "@/lib/auth-guard";
+import { requireRoleAction } from "@/lib/auth-guard";
 import { prisma } from "@/lib/prisma";
 import { parseCsvSicam } from "@/server/services/csv-parser";
 import { registrarAuditoria } from "@/server/services/audit";
@@ -29,7 +29,7 @@ export interface ImportacaoResult {
 export async function previewImportacaoCsv(
   formData: FormData,
 ): Promise<{ success: boolean; error?: string; data?: ImportacaoPreview }> {
-  const { user, error: authError } = await requireAuthAction();
+  const { user, error: authError } = await requireRoleAction(["GESTOR_ADMIN"]);
   if (authError) return { success: false, error: authError };
 
   const file = formData.get("arquivo") as File | null;
@@ -197,7 +197,7 @@ const BATCH_SIZE = 500;
 export async function confirmarImportacaoCsv(
   formData: FormData,
 ): Promise<ImportacaoResult> {
-  const { user, error: authError } = await requireAuthAction();
+  const { user, error: authError } = await requireRoleAction(["GESTOR_ADMIN"]);
   if (authError) return { success: false, error: authError };
 
   const file = formData.get("arquivo") as File | null;

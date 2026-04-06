@@ -12,12 +12,14 @@ export default defineConfig({
     trace: "on-first-retry",
   },
   projects: [
+    // Apenas Chromium no projeto local/CI: WebKit exige `npx playwright install webkit`.
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },
-    { name: "webkit", use: { ...devices["Desktop Safari"] } },
   ],
   webServer: {
     command: "npm run dev",
     url: "http://localhost:3000",
     reuseExistingServer: !process.env.CI,
+    // E2E usa login só-banco (sem AD); evita falhar quando .env tem LDAP_URL.
+    env: { ...process.env, LDAP_URL: "" },
   },
 });

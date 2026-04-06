@@ -126,7 +126,14 @@ export function LoginForm() {
 
       <div className="text-center">
         <p className="text-sm text-muted-foreground">
-          Utilize suas credenciais de rede (LDAP/AD) da JFAP
+          Use sua matrícula e senha de rede (validadas no AD quando o LDAP está
+          configurado). No primeiro acesso com LDAP, sua conta é criada
+          automaticamente; um gestor pode ajustar seu perfil depois, se necessário.
+        </p>
+        <p className="mt-2 text-xs text-muted-foreground">
+          Ambiente local sem LDAP: qualquer senha serve para usuários do seed (
+          <code className="text-xs">npx prisma db seed</code>
+          ).
         </p>
       </div>
     </form>

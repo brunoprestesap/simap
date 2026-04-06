@@ -4,7 +4,9 @@ test.describe("Login", () => {
   test("deve exibir a página de login", async ({ page }) => {
     await page.goto("/login");
 
-    await expect(page.getByText("SIMAP")).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Acessar SIMAP" }),
+    ).toBeVisible();
     await expect(page.getByLabel("Matrícula")).toBeVisible();
     await expect(page.getByLabel("Senha")).toBeVisible();
     await expect(page.getByRole("button", { name: "Entrar" })).toBeVisible();

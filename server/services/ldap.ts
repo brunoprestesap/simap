@@ -1,40 +1,64 @@
-"use server";
-
 import { prisma } from "@/lib/prisma";
+import {
+  findDirectoryEmailByMatricula,
+  getLdapBindConfig,
+  isLdapConfigured,
+} from "@/lib/ldap";
+
+function normalizeMatricula(matricula: string): string {
+  return matricula.trim().toUpperCase();
+}
 
 /**
  * Busca e-mail de um servidor pela matrícula.
- * Em produção, consulta o LDAP/AD. Em dev, retorna o e-mail do banco.
+ * Com LDAP configurado, consulta o diretório; senão (ou se não houver mail), usa o banco.
  */
 export async function buscarEmailPorMatricula(
   matricula: string,
 ): Promise<string | null> {
-  // TODO: Implementar LDAP real quando servidor disponível
-  // if (process.env.LDAP_URL) { return await ldapSearchEmail(matricula); }
+  const key = normalizeMatricula(matricula);
+
+  if (isLdapConfigured() && getLdapBindConfig()) {
+    const fromDirectory = await findDirectoryEmailByMatricula(key);
+    if (fromDirectory) return fromDirectory;
+  }
 
   const servidor = await prisma.servidor.findUnique({
-    where: { matricula },
+    where: { matricula: key },
     select: { email: true },
   });
   return servidor?.email ?? null;
 }
 
 /**
- * Busca e-mails de múltiplos servidores em uma única query.
+ * Busca e-mails de múltiplos servidores; LDAP quando disponível, com fallback ao banco.
  */
 export async function buscarEmailsPorMatriculas(
   matriculas: string[],
 ): Promise<Map<string, string>> {
   if (matriculas.length === 0) return new Map();
 
+  const normalized = [...new Set(matriculas.map(normalizeMatricula))];
+  const result = new Map<string, string>();
+
+  if (isLdapConfigured() && getLdapBindConfig()) {
+    for (const m of normalized) {
+      const mail = await findDirectoryEmailByMatricula(m);
+      if (mail) result.set(m, mail);
+    }
+  }
+
+  const stillMissing = normalized.filter((m) => !result.has(m));
+  if (stillMissing.length === 0) return result;
+
   const servidores = await prisma.servidor.findMany({
-    where: { matricula: { in: matriculas } },
+    where: { matricula: { in: stillMissing } },
     select: { matricula: true, email: true },
   });
 
-  return new Map(
-    servidores
-      .filter((s) => s.email)
-      .map((s) => [s.matricula, s.email!]),
-  );
+  for (const s of servidores) {
+    if (s.email) result.set(s.matricula, s.email);
+  }
+
+  return result;
 }

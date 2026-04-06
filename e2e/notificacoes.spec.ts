@@ -3,10 +3,10 @@ import { test, expect } from "@playwright/test";
 test.describe("Notificações", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/login");
-    await page.fill('input[name="matricula"]', "TEC001");
-    await page.fill('input[name="senha"]', "senha123");
+    await page.fill('input[name="matricula"]', "AP20151");
+    await page.fill('input[name="senha"]', "qualquer");
     await page.click('button[type="submit"]');
-    await page.waitForURL("/home");
+    await page.waitForURL("/home", { timeout: 15_000 });
   });
 
   test("deve exibir ícone de notificação no header", async ({ page }) => {

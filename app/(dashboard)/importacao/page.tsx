@@ -1,8 +1,8 @@
-import { requireAuth } from "@/lib/auth-guard";
+import { requireRole } from "@/lib/auth-guard";
 import { ImportacaoWizard } from "./ImportacaoWizard";
 
 export default async function ImportacaoPage() {
-  await requireAuth();
+  await requireRole(["GESTOR_ADMIN"]);
 
   return (
     <div className="space-y-6">
