@@ -175,7 +175,7 @@ export function ConfirmacaoMovimentacao({
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
       <div className="space-y-6">
-        <section className="flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+        <section className="flex h-auto flex-col rounded-xl border border-border bg-card shadow-sm">
           <div className="border-b border-border p-6">
             <h3 className="text-lg font-semibold tracking-tight text-foreground">
               Confirmar Destino

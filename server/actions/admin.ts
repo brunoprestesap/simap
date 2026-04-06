@@ -184,6 +184,8 @@ const editarServidorSchema = z.object({
   nome: z.string().min(1, "Nome é obrigatório"),
   email: z.string().email("E-mail inválido").optional().or(z.literal("")),
   unidadeId: z.string().min(1, "Unidade é obrigatória"),
+  responsavelUnidade: z.boolean(),
+  setorIds: z.array(z.string()).optional(),
 });
 
 export async function editarServidor(
@@ -196,18 +198,46 @@ export async function editarServidor(
   const parsed = editarServidorSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.issues[0].message };
 
-  await prisma.servidor.update({
-    where: { id },
-    data: {
-      nome: parsed.data.nome,
-      email: parsed.data.email || null,
-      unidadeId: parsed.data.unidadeId,
-    },
-  });
+  const { nome, email, unidadeId, responsavelUnidade, setorIds } = parsed.data;
+  const setoresParaVincular = responsavelUnidade ? [] : (setorIds ?? []);
+
+  if (setoresParaVincular.length > 0) {
+    const count = await prisma.setor.count({
+      where: { id: { in: setoresParaVincular }, unidadeId, ativo: true },
+    });
+    if (count !== setoresParaVincular.length) {
+      return { success: false, error: "Um ou mais setores não pertencem à unidade selecionada." };
+    }
+  }
+
+  await prisma.$transaction([
+    prisma.servidor.update({
+      where: { id },
+      data: {
+        nome,
+        email: email || null,
+        unidadeId,
+        responsavelUnidade,
+      },
+    }),
+    prisma.servidorSetor.deleteMany({ where: { servidorId: id } }),
+    ...(setoresParaVincular.length > 0
+      ? [
+          prisma.servidorSetor.createMany({
+            data: setoresParaVincular.map((setorId) => ({
+              servidorId: id,
+              setorId,
+            })),
+          }),
+        ]
+      : []),
+  ]);
 
   await registrarAuditoria("EDITAR_SERVIDOR", "Servidor", id, user!.id, {
-    nome: parsed.data.nome,
-    unidadeId: parsed.data.unidadeId,
+    nome,
+    unidadeId,
+    responsavelUnidade,
+    setorIds: setoresParaVincular,
   });
 
   return { success: true };
@@ -220,10 +250,13 @@ export async function vincularServidorUnidade(
   const { user, error } = await requireRoleAction(["GESTOR_ADMIN", "SERVIDOR_SEMAP"]);
   if (error) return { success: false, error };
 
-  await prisma.servidor.update({
-    where: { id: servidorId },
-    data: { unidadeId },
-  });
+  await prisma.$transaction([
+    prisma.servidor.update({
+      where: { id: servidorId },
+      data: { unidadeId, responsavelUnidade: false },
+    }),
+    prisma.servidorSetor.deleteMany({ where: { servidorId } }),
+  ]);
 
   await registrarAuditoria(
     "VINCULAR_SERVIDOR_UNIDADE",

@@ -126,7 +126,7 @@ export async function listarSetoresPorUnidade(unidadeId: string) {
 export async function buscarTomboParaMovimentacao(
   numero: string,
 ): Promise<BuscarTomboMovimentacaoResult> {
-  const tombo = await prisma.tombo.findUnique({
+  const tomboByNumero = await prisma.tombo.findUnique({
     where: { numero },
     include: {
       unidade: { select: { id: true, codigo: true, descricao: true } },
@@ -145,6 +145,34 @@ export async function buscarTomboParaMovimentacao(
       },
     },
   });
+
+  const numeroSemZeros = numero.replace(/^0+/, "");
+  const fallbackNumero =
+    numeroSemZeros.length > 0 && numeroSemZeros !== numero ? numeroSemZeros : null;
+
+  const tombo =
+    tomboByNumero ??
+    (fallbackNumero
+      ? await prisma.tombo.findUnique({
+          where: { numero: fallbackNumero },
+          include: {
+            unidade: { select: { id: true, codigo: true, descricao: true } },
+            setor: { select: { id: true, codigo: true, nome: true } },
+            servidorResponsavel: {
+              select: { id: true, nome: true, matricula: true },
+            },
+            itensMovimentacao: {
+              where: {
+                movimentacao: {
+                  status: { in: [...MOVIMENTACAO_STATUS_EM_ANDAMENTO] },
+                },
+              },
+              select: { id: true },
+              take: 1,
+            },
+          },
+        })
+      : null);
 
   if (!tombo) {
     return {

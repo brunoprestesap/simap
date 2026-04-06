@@ -33,6 +33,9 @@ export async function listarServidoresAdmin(busca?: string) {
     take: 200,
     include: {
       unidade: { select: { id: true, descricao: true } },
+      setores: {
+        include: { setor: { select: { id: true, nome: true } } },
+      },
       _count: { select: { tombosResponsavel: true } },
     },
   });

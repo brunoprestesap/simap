@@ -91,6 +91,35 @@ describe("useTomboSelection", () => {
     );
   });
 
+  it("trata tombos com e sem zero à esquerda como o mesmo registro", async () => {
+    buscarTomboParaMovimentacaoMock.mockResolvedValue({
+      status: "disponivel",
+      tombo: createTombo("11706"),
+    } satisfies BuscarTomboMovimentacaoResult);
+
+    const { result } = renderHook(() => useTomboSelection());
+
+    await act(async () => {
+      await result.current.addTombo("011706");
+    });
+
+    await waitFor(() => expect(result.current.tombos).toHaveLength(1));
+
+    let shouldAddDuplicate = true;
+
+    await act(async () => {
+      shouldAddDuplicate = await result.current.addTombo("11706");
+    });
+
+    expect(shouldAddDuplicate).toBe(false);
+    expect(result.current.tombos).toHaveLength(1);
+    expect(buscarTomboParaMovimentacaoMock).toHaveBeenCalledTimes(1);
+    expect(showToastMock).toHaveBeenCalledWith(
+      "info",
+      "Tombo 11706 já está na lista.",
+    );
+  });
+
   it("mantém o estado de loading enquanto existe busca em andamento", async () => {
     const pendingLookup = deferred<BuscarTomboMovimentacaoResult>();
     buscarTomboParaMovimentacaoMock.mockReturnValueOnce(pendingLookup.promise);

@@ -14,6 +14,6 @@ services:
   app:
     environment:
       - DATABASE_URL=postgresql://simap:simap@db:5432/simap?schema=public
-      - NEXTAUTH_URL=https://192.168.100.228
-      - APP_URL=https://192.168.100.228
+      - NEXTAUTH_URL=http://localhost:3000
+      - APP_URL=http://localhost:3000
       - AUTH_TRUST_HOST=true

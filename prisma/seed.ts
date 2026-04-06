@@ -14,6 +14,7 @@ async function main() {
   await prisma.itemMovimentacao.deleteMany();
   await prisma.movimentacao.deleteMany();
   await prisma.tombo.deleteMany();
+  await prisma.servidorSetor.deleteMany();
   await prisma.usuario.deleteMany();
   await prisma.servidor.deleteMany();
   await prisma.setor.deleteMany();
@@ -57,17 +58,40 @@ async function main() {
 
   // ─── Servidores ──────────────────────────────────────────
   const servidores = await Promise.all([
-    prisma.servidor.create({ data: { matricula: "AP20151", nome: "Carlos Eduardo Silva", email: "carlos.silva@jfap.jus.br", unidadeId: nti.id } }),
+    prisma.servidor.create({ data: { matricula: "AP20151", nome: "Carlos Eduardo Silva", email: "carlos.silva@jfap.jus.br", unidadeId: nti.id, responsavelUnidade: true } }),
     prisma.servidor.create({ data: { matricula: "AP20152", nome: "Ana Paula Souza", email: "ana.souza@jfap.jus.br", unidadeId: nti.id } }),
     prisma.servidor.create({ data: { matricula: "AP20153", nome: "Roberto Oliveira", email: "roberto.oliveira@jfap.jus.br", unidadeId: vara1.id } }),
     prisma.servidor.create({ data: { matricula: "AP20154", nome: "Maria Fernanda Costa", email: "maria.costa@jfap.jus.br", unidadeId: vara1.id } }),
-    prisma.servidor.create({ data: { matricula: "AP20155", nome: "João Pedro Santos", email: "joao.santos@jfap.jus.br", unidadeId: vara2.id } }),
+    prisma.servidor.create({ data: { matricula: "AP20155", nome: "João Pedro Santos", email: "joao.santos@jfap.jus.br", unidadeId: vara2.id, responsavelUnidade: true } }),
     prisma.servidor.create({ data: { matricula: "AP20156", nome: "Luciana Rodrigues", email: "luciana.rodrigues@jfap.jus.br", unidadeId: vara2.id } }),
-    prisma.servidor.create({ data: { matricula: "AP20157", nome: "Fernando Almeida", email: "fernando.almeida@jfap.jus.br", unidadeId: semap.id } }),
+    prisma.servidor.create({ data: { matricula: "AP20157", nome: "Fernando Almeida", email: "fernando.almeida@jfap.jus.br", unidadeId: semap.id, responsavelUnidade: true } }),
     prisma.servidor.create({ data: { matricula: "AP20158", nome: "Patrícia Lima", email: "patricia.lima@jfap.jus.br", unidadeId: semap.id } }),
     prisma.servidor.create({ data: { matricula: "AP20159", nome: "Ricardo Mendes", email: "ricardo.mendes@jfap.jus.br", unidadeId: secad.id } }),
     prisma.servidor.create({ data: { matricula: "AP20160", nome: "Juliana Pereira", email: "juliana.pereira@jfap.jus.br", unidadeId: secad.id } }),
   ]);
+
+  // ─── Vinculações Servidor-Setor ────────────────────────
+  // AP20152 (Ana Paula / NTI) → apenas setor Infraestrutura
+  // AP20153 (Roberto / 1ªVara) → Gabinete + Secretaria
+  // AP20154 (Maria / 1ªVara) → apenas Secretaria
+  // AP20156 (Luciana / 2ªVara) → apenas Gabinete
+  // AP20158 (Patrícia / SEMAP) → apenas Patrimônio
+  // AP20159 (Ricardo / SECAD) → Administração + RH
+  // AP20160 (Juliana / SECAD) → apenas RH
+  const [secadAdm, secadRh, ntiInfra, , vara1Gab, vara1Sec, vara2Gab, , semapPat] = setores;
+  await prisma.servidorSetor.createMany({
+    data: [
+      { servidorId: servidores[1].id, setorId: ntiInfra.id },
+      { servidorId: servidores[2].id, setorId: vara1Gab.id },
+      { servidorId: servidores[2].id, setorId: vara1Sec.id },
+      { servidorId: servidores[3].id, setorId: vara1Sec.id },
+      { servidorId: servidores[5].id, setorId: vara2Gab.id },
+      { servidorId: servidores[7].id, setorId: semapPat.id },
+      { servidorId: servidores[8].id, setorId: secadAdm.id },
+      { servidorId: servidores[8].id, setorId: secadRh.id },
+      { servidorId: servidores[9].id, setorId: secadRh.id },
+    ],
+  });
 
   // ─── Usuários (1 de cada perfil) ────────────────────────
   const usuarios = await Promise.all([
@@ -75,6 +99,7 @@ async function main() {
     prisma.usuario.create({ data: { matricula: "AP20153", nome: "Roberto Oliveira", perfil: PerfilUsuario.SERVIDOR_RESPONSAVEL } }),
     prisma.usuario.create({ data: { matricula: "AP20157", nome: "Fernando Almeida", perfil: PerfilUsuario.SERVIDOR_SEMAP } }),
     prisma.usuario.create({ data: { matricula: "AP20159", nome: "Ricardo Mendes", perfil: PerfilUsuario.GESTOR_ADMIN } }),
+    prisma.usuario.create({ data: { matricula: "AP20256", nome: "Bruno Prestes", perfil: PerfilUsuario.SERVIDOR_RESPONSAVEL } }),
   ]);
 
   const [tecnico, responsavel, semapUser, gestor] = usuarios;
@@ -230,7 +255,8 @@ async function main() {
   console.log("Seed completed successfully!");
   console.log(`  - ${unidades.length} unidades`);
   console.log(`  - ${setores.length} setores`);
-  console.log(`  - ${servidores.length} servidores`);
+  console.log(`  - ${servidores.length} servidores (3 responsáveis por unidade inteira)`);
+  console.log(`  - 9 vinculações servidor-setor`);
   console.log(`  - 4 usuários`);
   console.log(`  - ${tombosCriados.length} tombos`);
   console.log(`  - 5 movimentações`);

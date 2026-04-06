@@ -59,6 +59,7 @@ model Setor {
 
   unidade Unidade @relation(fields: [unidadeId], references: [id])
   tombos  Tombo[]
+  servidores           ServidorSetor[]
   movimentacoesOrigem  Movimentacao[] @relation("SetorOrigem")
   movimentacoesDestino Movimentacao[] @relation("SetorDestino")
 
@@ -67,20 +68,36 @@ model Setor {
 }
 
 model Servidor {
-  id        String   @id @default(cuid())
-  matricula String   @unique
-  nome      String
-  email     String?
-  unidadeId String
-  ativo     Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                 String   @id @default(cuid())
+  matricula          String   @unique
+  nome               String
+  email              String?
+  unidadeId          String
+  responsavelUnidade Boolean  @default(false)
+  ativo              Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
-  unidade           Unidade @relation(fields: [unidadeId], references: [id])
+  unidade           Unidade        @relation(fields: [unidadeId], references: [id])
   tombosResponsavel Tombo[]
+  setores           ServidorSetor[]
 
   @@index([matricula])
   @@index([unidadeId])
+}
+
+model ServidorSetor {
+  id         String   @id @default(cuid())
+  servidorId String
+  setorId    String
+  createdAt  DateTime @default(now())
+
+  servidor Servidor @relation(fields: [servidorId], references: [id], onDelete: Cascade)
+  setor    Setor    @relation(fields: [setorId], references: [id], onDelete: Cascade)
+
+  @@unique([servidorId, setorId])
+  @@index([servidorId])
+  @@index([setorId])
 }
 
 model Tombo {

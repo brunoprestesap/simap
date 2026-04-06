@@ -31,6 +31,12 @@ export function normalizeTomboNumero(codigo: string) {
   return codigo.trim();
 }
 
+function toTomboLookupKey(codigo: string) {
+  const numero = normalizeTomboNumero(codigo);
+  const semZeros = numero.replace(/^0+/, "");
+  return semZeros.length > 0 ? semZeros : "0";
+}
+
 /** Tombos are numeric, 1-6 digits (range 1–350434 in SICAM). */
 const TOMBO_PATTERN = /^\d{1,6}$/;
 
@@ -46,7 +52,7 @@ export function useTomboSelection() {
   const { toast, show: showToast } = useToast();
 
   useEffect(() => {
-    tombosRef.current = new Set(tombos.map((tombo) => tombo.numero));
+    tombosRef.current = new Set(tombos.map((tombo) => toTomboLookupKey(tombo.numero)));
   }, [tombos]);
 
   const updateLoadingState = useCallback(() => {
@@ -61,15 +67,16 @@ export function useTomboSelection() {
       // Silently reject scanner noise (EAN, UPC, etc. from other labels)
       if (!isValidTomboNumero(codigo)) return false;
 
-      const isDuplicate = tombosRef.current.has(codigo);
-      const isInFlight = pendingCodesRef.current.has(codigo);
+      const lookupKey = toTomboLookupKey(codigo);
+      const isDuplicate = tombosRef.current.has(lookupKey);
+      const isInFlight = pendingCodesRef.current.has(lookupKey);
 
       if (isDuplicate || isInFlight) {
         showToast("info", getDuplicateMessage(codigo, isInFlight));
         return false;
       }
 
-      pendingCodesRef.current.add(codigo);
+      pendingCodesRef.current.add(lookupKey);
       updateLoadingState();
 
       try {
@@ -86,20 +93,25 @@ export function useTomboSelection() {
         }
 
         setTombos((prev) => {
-          if (prev.some((tombo) => tombo.numero === codigo)) {
+          if (
+            prev.some(
+              (tombo) =>
+                toTomboLookupKey(tombo.numero) === toTomboLookupKey(result.tombo.numero),
+            )
+          ) {
             return prev;
           }
 
           return [...prev, result.tombo];
         });
-        tombosRef.current.add(codigo);
+        tombosRef.current.add(toTomboLookupKey(result.tombo.numero));
 
         return true;
       } catch {
         showToast("error", getLookupFeedback(codigo, "erro_generico"));
         return false;
       } finally {
-        pendingCodesRef.current.delete(codigo);
+        pendingCodesRef.current.delete(lookupKey);
         updateLoadingState();
       }
     },
@@ -107,7 +119,7 @@ export function useTomboSelection() {
   );
 
   const removeTombo = useCallback((numero: string) => {
-    tombosRef.current.delete(numero);
+    tombosRef.current.delete(toTomboLookupKey(numero));
     setTombos((prev) => prev.filter((tombo) => tombo.numero !== numero));
   }, []);
 

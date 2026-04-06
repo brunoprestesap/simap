@@ -40,6 +40,8 @@ Use `.env.example` como base:
 cp .env.example .env
 ```
 
+Se você também usa `.env.local`, ele tem precedência sobre `.env` no Next.js. Em desenvolvimento local padrão, mantenha `NEXTAUTH_URL` e `APP_URL` como `http://localhost:3000` para evitar redirecionamentos para outro host.
+
 Mínimas para rodar local:
 
 - `DATABASE_URL`
