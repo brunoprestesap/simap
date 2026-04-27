@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { loginAs } from "./helpers";
 
 test.describe("Login", () => {
   test("deve exibir a página de login", async ({ page }) => {
@@ -45,5 +46,16 @@ test.describe("Login", () => {
     // Técnico TI → /home
     await expect(page).toHaveURL(/\/home/, { timeout: 10000 });
     await expect(page.getByText("Olá, Carlos")).toBeVisible();
+  });
+});
+
+test.describe("Logout", () => {
+  test("deve fazer logout com sucesso", async ({ page }) => {
+    await loginAs(page, "AP20151");
+    await expect(page).toHaveURL("/home");
+
+    await page.getByRole("button", { name: "Sair" }).click();
+
+    await expect(page).toHaveURL(/\/login/, { timeout: 10_000 });
   });
 });
