@@ -34,20 +34,6 @@ test.describe("Backlog SEMAP", () => {
     await expect(page).toHaveURL("/backlog");
   });
 
-  test("deve abrir sheet de registro SICAM para movimentação confirmada", async ({ page }) => {
-    // Wait for list to load
-    await page.waitForSelector("[data-testid='backlog-list']", { timeout: 5000 }).catch(() => {});
-
-    const registerButton = page.getByRole("button", { name: "Registrar no SICAM" }).first();
-    if (await registerButton.isVisible()) {
-      await registerButton.click();
-      await expect(
-        page.getByRole("heading", { name: "Registrar no SICAM" }),
-      ).toBeVisible();
-      await expect(page.locator("#protocolo")).toBeVisible();
-      await expect(page.locator("#dataRegistro")).toBeVisible();
-    }
-  });
 
   test("deve registrar movimentação no SICAM com sucesso", async ({ page }) => {
     const movId = await getMovimentacaoConfirmada();
