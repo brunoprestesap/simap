@@ -1,14 +1,9 @@
 import { test, expect } from "@playwright/test";
-import { getMovimentacaoConfirmada } from "./helpers";
+import { getMovimentacaoConfirmada, loginAs } from "./helpers";
 
 test.describe("Backlog SEMAP", () => {
   test.beforeEach(async ({ page }) => {
-    // SERVIDOR_SEMAP no seed: AP20157
-    await page.goto("/login");
-    await page.fill('input[name="matricula"]', "AP20157");
-    await page.fill('input[name="senha"]', "senha123");
-    await page.click('button[type="submit"]');
-    await page.waitForURL("/home", { timeout: 15_000 });
+    await loginAs(page, "AP20157");
     await page.goto("/backlog");
     await page.waitForURL("/backlog", { timeout: 15_000 });
   });
