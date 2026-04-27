@@ -141,53 +141,38 @@ async function resolverSetores(
   return mapa;
 }
 
-async function resolverServidores(
-  registros: CsvRow[],
-  mapaUnidades: Map<string, string>,
-) {
-  const matriculasUnicas = [
-    ...new Set(registros.map((r) => r.matriculaResponsavel).filter(Boolean)),
-  ] as string[];
+/** Matrícula normalizada → id de Usuario SIMAP (quando existir). */
+async function resolverUsuarioResponsavelPorMatricula(matriculas: string[]) {
+  const keys = [
+    ...new Set(
+      matriculas
+        .map((m) => m.trim().toUpperCase())
+        .filter((m) => m.length > 0),
+    ),
+  ];
+  if (keys.length === 0) return new Map<string, string>();
 
-  const existentes = await prisma.servidor.findMany({
-    where: { matricula: { in: matriculasUnicas } },
+  const existentes = await prisma.usuario.findMany({
+    where: { matricula: { in: keys } },
     select: { id: true, matricula: true },
   });
 
-  const mapa = new Map(existentes.map((s) => [s.matricula, s.id]));
+  return new Map(existentes.map((u) => [u.matricula, u.id]));
+}
 
-  const novos = matriculasUnicas.filter((m) => !mapa.has(m));
-  if (novos.length > 0) {
-    // Servidores só podem ser criados com unidade (campo obrigatório)
-    const novosComUnidade = novos.filter((matricula) => {
-      const row = registros.find((r) => r.matriculaResponsavel === matricula)!;
-      return row.codigoLotacao && mapaUnidades.has(row.codigoLotacao);
-    });
-
-    if (novosComUnidade.length > 0) {
-      await prisma.servidor.createMany({
-        data: novosComUnidade.map((matricula) => {
-          const row = registros.find(
-            (r) => r.matriculaResponsavel === matricula,
-          )!;
-          return {
-            matricula,
-            nome: row.nomeResponsavel ?? matricula,
-            unidadeId: mapaUnidades.get(row.codigoLotacao!)!,
-          };
-        }),
-        skipDuplicates: true,
-      });
-    }
-
-    const criados = await prisma.servidor.findMany({
-      where: { matricula: { in: novos } },
-      select: { id: true, matricula: true },
-    });
-    for (const s of criados) mapa.set(s.matricula, s.id);
-  }
-
-  return mapa;
+function dadosResponsavelTomboDoCsv(
+  row: CsvRow,
+  mapaUsuarioResp: Map<string, string>,
+) {
+  const matKey = row.matriculaResponsavel?.trim().toUpperCase() ?? null;
+  const usuarioResponsavelId = matKey ? mapaUsuarioResp.get(matKey) ?? null : null;
+  const nomeSnap =
+    row.nomeResponsavel?.trim() || matKey || null;
+  return {
+    matriculaResponsavel: matKey,
+    nomeResponsavel: nomeSnap,
+    usuarioResponsavelId,
+  };
 }
 
 // ─── Confirmação (processamento em batch) ─────────────────
@@ -213,7 +198,9 @@ export async function confirmarImportacaoCsv(
   // Fase 1: Resolver entidades relacionadas em batch
   const mapaUnidades = await resolverUnidades(registros);
   const mapaSetores = await resolverSetores(registros, mapaUnidades);
-  const mapaServidores = await resolverServidores(registros, mapaUnidades);
+  const mapaUsuarioResp = await resolverUsuarioResponsavelPorMatricula(
+    registros.map((r) => r.matriculaResponsavel).filter(Boolean) as string[],
+  );
 
   // Fase 2: Identificar tombos existentes para separar creates de updates
   const todosNumeros = registros.map((r) => r.numeroTombo);
@@ -245,9 +232,7 @@ export async function confirmarImportacaoCsv(
               `${row.codigoSetor}|${mapaUnidades.get(row.codigoLotacao)}`,
             )
           : undefined;
-      const servidorId = row.matriculaResponsavel
-        ? mapaServidores.get(row.matriculaResponsavel)
-        : undefined;
+      const resp = dadosResponsavelTomboDoCsv(row, mapaUsuarioResp);
 
       return prisma.tombo
         .update({
@@ -258,7 +243,9 @@ export async function confirmarImportacaoCsv(
             nomeFornecedor: row.nomeFornecedor ?? null,
             ...(unidadeId ? { unidadeId } : {}),
             ...(setorId ? { setorId } : {}),
-            ...(servidorId ? { servidorResponsavelId: servidorId } : {}),
+            matriculaResponsavel: resp.matriculaResponsavel,
+            nomeResponsavel: resp.nomeResponsavel,
+            usuarioResponsavelId: resp.usuarioResponsavelId,
             saida: row.saida ?? null,
           },
         })
@@ -288,9 +275,7 @@ export async function confirmarImportacaoCsv(
                 `${row.codigoSetor}|${mapaUnidades.get(row.codigoLotacao)}`,
               )
             : undefined;
-        const servidorId = row.matriculaResponsavel
-          ? mapaServidores.get(row.matriculaResponsavel)
-          : undefined;
+        const resp = dadosResponsavelTomboDoCsv(row, mapaUsuarioResp);
 
         return {
           numero: row.numeroTombo,
@@ -299,7 +284,9 @@ export async function confirmarImportacaoCsv(
           nomeFornecedor: row.nomeFornecedor ?? null,
           unidadeId: unidadeId ?? null,
           setorId: setorId ?? null,
-          servidorResponsavelId: servidorId ?? null,
+          matriculaResponsavel: resp.matriculaResponsavel,
+          nomeResponsavel: resp.nomeResponsavel,
+          usuarioResponsavelId: resp.usuarioResponsavelId,
           saida: row.saida ?? null,
         };
       });

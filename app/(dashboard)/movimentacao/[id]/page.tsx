@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { buscarMovimentacaoDetalhada } from "@/server/queries/movimentacao";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { MovimentacaoTimeline } from "@/components/common/MovimentacaoTimeline";
+import { ConfirmacaoInternaButton } from "./ConfirmacaoInternaButton";
+import { avaliarPermissaoConfirmacaoMovimentacao } from "@/lib/permissions/movimentacao-confirmacao";
 import {
   MovimentacaoDataCard,
   TombosTable,
@@ -16,11 +18,20 @@ interface Props {
 }
 
 export default async function MovimentacaoDetalhePage({ params }: Props) {
-  await requireAuth();
+  const user = await requireAuth();
 
   const { id } = await params;
   const mov = await buscarMovimentacaoDetalhada(id);
   if (!mov) notFound();
+  const permissaoConfirmacao = await avaliarPermissaoConfirmacaoMovimentacao({
+    status: mov.status,
+    tokenExpiraEm: mov.tokenExpiraEm,
+    unidadeDestinoId: mov.unidadeDestinoId,
+    usuario: {
+      matricula: user.matricula,
+      perfil: user.perfil,
+    },
+  });
 
   return (
     <div className="space-y-6">
@@ -48,6 +59,19 @@ export default async function MovimentacaoDetalhePage({ params }: Props) {
 
       {/* Movement data card */}
       <MovimentacaoDataCard mov={mov} />
+
+      {mov.status === "PENDENTE_CONFIRMACAO" && permissaoConfirmacao.podeConfirmar && (
+        <ConfirmacaoInternaButton movimentacaoId={mov.id} />
+      )}
+      {mov.status === "PENDENTE_CONFIRMACAO" &&
+        !permissaoConfirmacao.podeConfirmar && (
+          <div className="rounded-lg border border-jf-warning/30 bg-jf-warning/10 p-4">
+            <p className="text-sm text-foreground">
+              Esta movimentação está pendente, mas sua conta não possui permissão
+              para confirmar o recebimento.
+            </p>
+          </div>
+        )}
 
       {/* Timeline */}
       {mov.status !== "NAO_CONFIRMADA" && (

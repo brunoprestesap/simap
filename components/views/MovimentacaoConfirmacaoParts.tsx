@@ -215,10 +215,10 @@ export function MovimentacaoSetorSelect({
     <div className="space-y-2">
       <div className="space-y-1">
         <label className="block text-sm font-medium text-foreground">
-          Setor de destino
+          Setor de destino *
         </label>
         <p className="text-xs text-muted-foreground">
-          Opcionalmente, selecione o setor interno da unidade de destino.
+          Selecione o setor interno da unidade de destino.
         </p>
       </div>
       <select
@@ -226,7 +226,7 @@ export function MovimentacaoSetorSelect({
         onChange={(event) => onChange(event.target.value)}
         className="h-11 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary"
       >
-        <option value="">Selecione o setor (opcional)</option>
+        <option value="">Selecione o setor</option>
         {setores.map((setor) => (
           <option key={setor.id} value={setor.id}>
             {setor.nome}

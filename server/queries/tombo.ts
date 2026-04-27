@@ -19,13 +19,19 @@ interface TomboFilters {
   porPagina?: number;
 }
 
+const usuarioResponsavelSelect = {
+  select: { id: true, nome: true, matricula: true },
+} as const;
+
 function mapTomboSelecionado(tombo: {
   id: string;
   numero: string;
   descricaoMaterial: string;
   unidade: TomboSelecionado["unidade"];
   setor: TomboSelecionado["setor"];
-  servidorResponsavel: TomboSelecionado["servidorResponsavel"];
+  usuarioResponsavel: TomboSelecionado["usuarioResponsavel"];
+  matriculaResponsavel: string | null;
+  nomeResponsavel: string | null;
 }): TomboSelecionado {
   return {
     id: tombo.id,
@@ -33,7 +39,9 @@ function mapTomboSelecionado(tombo: {
     descricaoMaterial: tombo.descricaoMaterial,
     unidade: tombo.unidade,
     setor: tombo.setor,
-    servidorResponsavel: tombo.servidorResponsavel,
+    usuarioResponsavel: tombo.usuarioResponsavel,
+    matriculaResponsavel: tombo.matriculaResponsavel,
+    nomeResponsavel: tombo.nomeResponsavel,
   };
 }
 
@@ -88,9 +96,7 @@ export async function listarTombos(filters: TomboFilters = {}) {
       include: {
         unidade: { select: { id: true, codigo: true, descricao: true } },
         setor: { select: { id: true, nome: true } },
-        servidorResponsavel: {
-          select: { id: true, nome: true, matricula: true },
-        },
+        usuarioResponsavel: usuarioResponsavelSelect,
         itensMovimentacao: {
           where: {
             movimentacao: {
@@ -131,9 +137,7 @@ export async function buscarTomboParaMovimentacao(
     include: {
       unidade: { select: { id: true, codigo: true, descricao: true } },
       setor: { select: { id: true, codigo: true, nome: true } },
-      servidorResponsavel: {
-        select: { id: true, nome: true, matricula: true },
-      },
+      usuarioResponsavel: usuarioResponsavelSelect,
       itensMovimentacao: {
         where: {
           movimentacao: {
@@ -158,9 +162,7 @@ export async function buscarTomboParaMovimentacao(
           include: {
             unidade: { select: { id: true, codigo: true, descricao: true } },
             setor: { select: { id: true, codigo: true, nome: true } },
-            servidorResponsavel: {
-              select: { id: true, nome: true, matricula: true },
-            },
+            usuarioResponsavel: usuarioResponsavelSelect,
             itensMovimentacao: {
               where: {
                 movimentacao: {

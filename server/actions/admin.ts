@@ -5,6 +5,14 @@ import { requireRoleAction } from "@/lib/auth-guard";
 import { prisma } from "@/lib/prisma";
 import { registrarAuditoria } from "@/server/services/audit";
 
+function normalizeCode(value: string): string {
+  return value.trim().toUpperCase();
+}
+
+function normalizeLabel(value: string): string {
+  return value.trim().replace(/\s+/g, " ");
+}
+
 // ─── Unidades ───────────────────────────────────────────
 
 const unidadeSchema = z.object({
@@ -22,13 +30,25 @@ export async function criarUnidade(input: z.input<typeof unidadeSchema>): Promis
   const parsed = unidadeSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.issues[0].message };
 
-  const existente = await prisma.unidade.findUnique({
-    where: { codigo: parsed.data.codigo },
+  const data = {
+    codigo: normalizeCode(parsed.data.codigo),
+    descricao: normalizeLabel(parsed.data.descricao),
+  };
+
+  const existenteCodigo = await prisma.unidade.findFirst({
+    where: { codigo: { equals: data.codigo, mode: "insensitive" } },
   });
-  if (existente) return { success: false, error: "Código de unidade já existe." };
+  if (existenteCodigo) return { success: false, error: "Código de unidade já existe." };
+
+  const existenteDescricao = await prisma.unidade.findFirst({
+    where: { descricao: { equals: data.descricao, mode: "insensitive" } },
+  });
+  if (existenteDescricao) {
+    return { success: false, error: "Descrição de unidade já existe." };
+  }
 
   const unidade = await prisma.unidade.create({
-    data: parsed.data,
+    data,
   });
 
   await registrarAuditoria("CRIAR_UNIDADE", "Unidade", unidade.id, user!.id, {
@@ -49,21 +69,33 @@ export async function editarUnidade(
   const parsed = unidadeSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.issues[0].message };
 
-  const existente = await prisma.unidade.findUnique({
-    where: { codigo: parsed.data.codigo },
+  const data = {
+    codigo: normalizeCode(parsed.data.codigo),
+    descricao: normalizeLabel(parsed.data.descricao),
+  };
+
+  const existenteCodigo = await prisma.unidade.findFirst({
+    where: { codigo: { equals: data.codigo, mode: "insensitive" } },
   });
-  if (existente && existente.id !== id) {
+  if (existenteCodigo && existenteCodigo.id !== id) {
     return { success: false, error: "Código de unidade já existe." };
+  }
+
+  const existenteDescricao = await prisma.unidade.findFirst({
+    where: { descricao: { equals: data.descricao, mode: "insensitive" } },
+  });
+  if (existenteDescricao && existenteDescricao.id !== id) {
+    return { success: false, error: "Descrição de unidade já existe." };
   }
 
   await prisma.unidade.update({
     where: { id },
-    data: parsed.data,
+    data,
   });
 
   await registrarAuditoria("EDITAR_UNIDADE", "Unidade", id, user!.id, {
-    codigo: parsed.data.codigo,
-    descricao: parsed.data.descricao,
+    codigo: data.codigo,
+    descricao: data.descricao,
   });
 
   return { success: true };
@@ -104,18 +136,30 @@ export async function criarSetor(input: z.input<typeof setorSchema>): Promise<{
   const parsed = setorSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.issues[0].message };
 
-  const existente = await prisma.setor.findUnique({
+  const data = {
+    codigo: normalizeCode(parsed.data.codigo),
+    nome: normalizeLabel(parsed.data.nome),
+    unidadeId: parsed.data.unidadeId,
+  };
+
+  const existenteCodigo = await prisma.setor.findFirst({
     where: {
-      codigo_unidadeId: {
-        codigo: parsed.data.codigo,
-        unidadeId: parsed.data.unidadeId,
-      },
+      unidadeId: data.unidadeId,
+      codigo: { equals: data.codigo, mode: "insensitive" },
     },
   });
-  if (existente) return { success: false, error: "Código de setor já existe nesta unidade." };
+  if (existenteCodigo) return { success: false, error: "Código de setor já existe nesta unidade." };
+
+  const existenteNome = await prisma.setor.findFirst({
+    where: {
+      unidadeId: data.unidadeId,
+      nome: { equals: data.nome, mode: "insensitive" },
+    },
+  });
+  if (existenteNome) return { success: false, error: "Nome de setor já existe nesta unidade." };
 
   const setor = await prisma.setor.create({
-    data: parsed.data,
+    data,
   });
 
   await registrarAuditoria("CRIAR_SETOR", "Setor", setor.id, user!.id, {
@@ -136,26 +180,40 @@ export async function editarSetor(
   const parsed = setorSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.issues[0].message };
 
-  const existente = await prisma.setor.findUnique({
+  const data = {
+    codigo: normalizeCode(parsed.data.codigo),
+    nome: normalizeLabel(parsed.data.nome),
+    unidadeId: parsed.data.unidadeId,
+  };
+
+  const existenteCodigo = await prisma.setor.findFirst({
     where: {
-      codigo_unidadeId: {
-        codigo: parsed.data.codigo,
-        unidadeId: parsed.data.unidadeId,
-      },
+      unidadeId: data.unidadeId,
+      codigo: { equals: data.codigo, mode: "insensitive" },
     },
   });
-  if (existente && existente.id !== id) {
+  if (existenteCodigo && existenteCodigo.id !== id) {
     return { success: false, error: "Código de setor já existe nesta unidade." };
+  }
+
+  const existenteNome = await prisma.setor.findFirst({
+    where: {
+      unidadeId: data.unidadeId,
+      nome: { equals: data.nome, mode: "insensitive" },
+    },
+  });
+  if (existenteNome && existenteNome.id !== id) {
+    return { success: false, error: "Nome de setor já existe nesta unidade." };
   }
 
   await prisma.setor.update({
     where: { id },
-    data: parsed.data,
+    data,
   });
 
   await registrarAuditoria("EDITAR_SETOR", "Setor", id, user!.id, {
-    codigo: parsed.data.codigo,
-    nome: parsed.data.nome,
+    codigo: data.codigo,
+    nome: data.nome,
   });
 
   return { success: true };
@@ -178,93 +236,57 @@ export async function desativarSetor(id: string): Promise<{
   return { success: true };
 }
 
-// ─── Servidores Responsáveis ────────────────────────────
+// ─── Lotação patrimonial (Usuario) ───────────────────────
 
-const editarServidorSchema = z.object({
+const editarUsuarioLotacaoSchema = z.object({
   nome: z.string().min(1, "Nome é obrigatório"),
   email: z.string().email("E-mail inválido").optional().or(z.literal("")),
   unidadeId: z.string().min(1, "Unidade é obrigatória"),
   responsavelUnidade: z.boolean(),
-  setorIds: z.array(z.string()).optional(),
+  setorId: z.string().optional().or(z.literal("")),
 });
 
-export async function editarServidor(
-  id: string,
-  input: z.input<typeof editarServidorSchema>,
+export async function editarUsuarioLotacao(
+  usuarioId: string,
+  input: z.input<typeof editarUsuarioLotacaoSchema>,
 ): Promise<{ success: boolean; error?: string }> {
   const { user, error } = await requireRoleAction(["GESTOR_ADMIN", "SERVIDOR_SEMAP"]);
   if (error) return { success: false, error };
 
-  const parsed = editarServidorSchema.safeParse(input);
+  const parsed = editarUsuarioLotacaoSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: parsed.error.issues[0].message };
 
-  const { nome, email, unidadeId, responsavelUnidade, setorIds } = parsed.data;
-  const setoresParaVincular = responsavelUnidade ? [] : (setorIds ?? []);
+  const { nome, email, unidadeId, responsavelUnidade, setorId } = parsed.data;
+  const setorIdFinal =
+    responsavelUnidade || !setorId || setorId === "" ? null : setorId;
 
-  if (setoresParaVincular.length > 0) {
-    const count = await prisma.setor.count({
-      where: { id: { in: setoresParaVincular }, unidadeId, ativo: true },
+  if (setorIdFinal) {
+    const ok = await prisma.setor.findFirst({
+      where: { id: setorIdFinal, unidadeId, ativo: true },
+      select: { id: true },
     });
-    if (count !== setoresParaVincular.length) {
-      return { success: false, error: "Um ou mais setores não pertencem à unidade selecionada." };
+    if (!ok) {
+      return { success: false, error: "O setor não pertence à unidade selecionada." };
     }
   }
 
-  await prisma.$transaction([
-    prisma.servidor.update({
-      where: { id },
-      data: {
-        nome,
-        email: email || null,
-        unidadeId,
-        responsavelUnidade,
-      },
-    }),
-    prisma.servidorSetor.deleteMany({ where: { servidorId: id } }),
-    ...(setoresParaVincular.length > 0
-      ? [
-          prisma.servidorSetor.createMany({
-            data: setoresParaVincular.map((setorId) => ({
-              servidorId: id,
-              setorId,
-            })),
-          }),
-        ]
-      : []),
-  ]);
+  await prisma.usuario.update({
+    where: { id: usuarioId },
+    data: {
+      nome,
+      email: email || null,
+      unidadeId,
+      responsavelUnidade,
+      setorId: setorIdFinal,
+    },
+  });
 
-  await registrarAuditoria("EDITAR_SERVIDOR", "Servidor", id, user!.id, {
+  await registrarAuditoria("EDITAR_USUARIO_LOTACAO", "Usuario", usuarioId, user!.id, {
     nome,
     unidadeId,
     responsavelUnidade,
-    setorIds: setoresParaVincular,
+    setorId: setorIdFinal,
   });
-
-  return { success: true };
-}
-
-export async function vincularServidorUnidade(
-  servidorId: string,
-  unidadeId: string,
-): Promise<{ success: boolean; error?: string }> {
-  const { user, error } = await requireRoleAction(["GESTOR_ADMIN", "SERVIDOR_SEMAP"]);
-  if (error) return { success: false, error };
-
-  await prisma.$transaction([
-    prisma.servidor.update({
-      where: { id: servidorId },
-      data: { unidadeId, responsavelUnidade: false },
-    }),
-    prisma.servidorSetor.deleteMany({ where: { servidorId } }),
-  ]);
-
-  await registrarAuditoria(
-    "VINCULAR_SERVIDOR_UNIDADE",
-    "Servidor",
-    servidorId,
-    user!.id,
-    { unidadeId },
-  );
 
   return { success: true };
 }

@@ -72,17 +72,17 @@ function tabelaTombos(tombos: TomboInfo[]): string {
 }
 
 /**
- * E-mail de saída (enviado ao responsável da unidade de ORIGEM)
+ * E-mail de confirmação (enviado ao responsável da unidade de DESTINO)
  * Contém link de confirmação com token.
  */
 export function templateEmailSaida(
   dados: MovimentacaoEmailData & { linkConfirmacao: string },
 ): string {
   const conteudo = `
-    <h2 style="margin:0 0 16px;color:#003366;font-size:18px;">Confirmação de Saída de Patrimônios</h2>
+    <h2 style="margin:0 0 16px;color:#003366;font-size:18px;">Confirmação de Entrada de Patrimônios</h2>
     <p style="margin:0 0 8px;font-size:14px;line-height:1.6;">
-      Uma movimentação patrimonial foi registrada envolvendo bens sob sua responsabilidade.
-      Por favor, confirme a saída dos tombos listados abaixo.
+      Uma movimentação patrimonial foi registrada com destino para sua unidade.
+      Por favor, confirme o recebimento dos tombos listados abaixo.
     </p>
 
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0;background-color:#F2F2F2;border-radius:4px;">
@@ -109,7 +109,7 @@ export function templateEmailSaida(
       <tr>
         <td align="center">
           <a href="${dados.linkConfirmacao}" style="display:inline-block;background-color:#003366;color:#FFFFFF;font-weight:600;font-size:14px;padding:12px 32px;border-radius:6px;text-decoration:none;">
-            Confirmar Saída
+            Confirmar Entrada
           </a>
         </td>
       </tr>
@@ -120,7 +120,7 @@ export function templateEmailSaida(
     </p>`;
 
   return layoutBase(
-    "Movimentação Patrimonial - Confirmação de Saída",
+    "Movimentação Patrimonial - Confirmação de Entrada",
     conteudo,
   );
 }

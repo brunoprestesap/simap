@@ -10,7 +10,8 @@ export interface SetorResumo {
   nome: string;
 }
 
-export interface ServidorResponsavelResumo {
+/** Responsável patrimonial (Usuário SIMAP ou só espelho SICAM em matricula/nome do tombo) */
+export interface ResponsavelPatrimonioResumo {
   id: string;
   nome: string;
   matricula: string;
@@ -22,7 +23,9 @@ export interface TomboSelecionado {
   descricaoMaterial: string;
   unidade?: UnidadeResumo | null;
   setor?: SetorResumo | null;
-  servidorResponsavel?: ServidorResponsavelResumo | null;
+  usuarioResponsavel?: ResponsavelPatrimonioResumo | null;
+  matriculaResponsavel?: string | null;
+  nomeResponsavel?: string | null;
 }
 
 export type BuscarTomboMovimentacaoResult =

@@ -20,6 +20,33 @@ export function formatRelativeTime(date: Date | string): string {
 }
 
 /**
+ * Converte string ISO curta (yyyy-mm-dd) para Date no horário local.
+ * Usa meio-dia para evitar deslocamentos de timezone/DST em data-only.
+ */
+export function parseDateOnlyLocal(value: string): Date {
+  const [yearStr, monthStr, dayStr] = value.split("-");
+  const year = Number(yearStr);
+  const month = Number(monthStr);
+  const day = Number(dayStr);
+
+  if (!year || !month || !day) {
+    throw new Error("Data inválida no formato yyyy-mm-dd");
+  }
+
+  return new Date(year, month - 1, day, 12, 0, 0, 0);
+}
+
+/**
+ * Retorna data local no formato yyyy-mm-dd para inputs type=date.
+ */
+export function toDateInputValueLocal(date: Date = new Date()): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+/**
  * Formata data no padrão brasileiro curto: dd/mm/aaaa.
  */
 export function formatDateBR(date: Date | string): string {

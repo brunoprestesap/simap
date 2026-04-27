@@ -45,7 +45,7 @@ export function ConfirmacaoButton({
           Movimentação confirmada com sucesso!
         </h3>
         <p className="mt-2 text-sm text-muted-foreground">
-          A confirmação foi registrada no sistema. Você pode fechar esta página.
+          A confirmação de entrada foi registrada no sistema. Você pode fechar esta página.
         </p>
       </div>
     );
@@ -54,7 +54,7 @@ export function ConfirmacaoButton({
   return (
     <>
       <Button className="w-full" size="lg" onClick={() => setShowModal(true)}>
-        Confirmar Saída
+        Confirmar Entrada
       </Button>
 
       {/* Confirmation modal */}
@@ -62,7 +62,7 @@ export function ConfirmacaoButton({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-sm rounded-lg bg-card border border-border p-6 shadow-xl">
             <h3 className="text-base font-semibold text-foreground mb-2">
-              Confirmar saída de {totalTombos}{" "}
+              Confirmar entrada de {totalTombos}{" "}
               {totalTombos === 1 ? "tombo" : "tombos"}?
             </h3>
             <p className="text-sm text-muted-foreground mb-4">

@@ -7,10 +7,7 @@ import { criarMovimentacaoSchema } from "@/lib/validations/movimentacao";
 import type { CriarMovimentacaoInput } from "@/lib/validations/movimentacao";
 import { registrarAuditoria } from "@/server/services/audit";
 import { enviarEmail } from "@/server/services/email";
-import {
-  templateEmailSaida,
-  templateEmailEntrada,
-} from "@/server/services/email-templates";
+import { templateEmailSaida } from "@/server/services/email-templates";
 import { buscarEmailsPorMatriculas } from "@/server/services/ldap";
 import {
   criarNotificacoes,
@@ -39,7 +36,7 @@ export async function criarMovimentacao(input: CriarMovimentacaoInput): Promise<
 
   const tombos = await prisma.tombo.findMany({
     where: { id: { in: tomboIds } },
-    include: { unidade: true, servidorResponsavel: true },
+    include: { unidade: true, usuarioResponsavel: true },
   });
 
   if (tombos.length === 0) {
@@ -146,44 +143,25 @@ export async function criarMovimentacao(input: CriarMovimentacaoInput): Promise<
   const appUrl = process.env.APP_URL ?? process.env.NEXTAUTH_URL ?? "http://localhost:3000";
   const linkConfirmacao = `${appUrl}/confirmar/${movimentacao.tokenConfirmacao}`;
 
-  const responsaveisOrigem = [
-    ...new Set(
-      tombos
-        .filter((t) => t.servidorResponsavel)
-        .map((t) => t.servidorResponsavel!.matricula),
-    ),
-  ];
-
-  const destinoServidores = await prisma.servidor.findMany({
-    where: { unidadeId: unidadeDestinoId, ativo: true },
+  const destinoResponsaveis = await prisma.usuario.findMany({
+    where: {
+      unidadeId: unidadeDestinoId,
+      ativo: true,
+      responsavelUnidade: true,
+    },
     select: { matricula: true },
   });
 
-  const todasMatriculas = [
-    ...responsaveisOrigem,
-    ...destinoServidores.map((s) => s.matricula),
-  ];
-
   // Busca todos e-mails em uma única query (fire-and-forget com log de erro)
-  buscarEmailsPorMatriculas(todasMatriculas)
+  buscarEmailsPorMatriculas(destinoResponsaveis.map((s) => s.matricula))
     .then((emailMap) => {
-      for (const matricula of responsaveisOrigem) {
-        const email = emailMap.get(matricula);
-        if (email) {
-          enviarEmail(
-            email,
-            "Movimentação Patrimonial - Confirmação de Saída",
-            templateEmailSaida({ ...emailData, linkConfirmacao }),
-          );
-        }
-      }
-      for (const srv of destinoServidores) {
+      for (const srv of destinoResponsaveis) {
         const email = emailMap.get(srv.matricula);
         if (email) {
           enviarEmail(
             email,
-            "Movimentação Patrimonial - Entrada de Tombos",
-            templateEmailEntrada(emailData),
+            "Movimentação Patrimonial - Confirmação de Entrada",
+            templateEmailSaida({ ...emailData, linkConfirmacao }),
           );
         }
       }
@@ -194,12 +172,14 @@ export async function criarMovimentacao(input: CriarMovimentacaoInput): Promise<
 
   // ─── Notificações ─────────────────────────────────────────
 
-  const usuarioIds = await buscarUsuarioIdsPorMatriculas(responsaveisOrigem);
+  const usuarioIds = await buscarUsuarioIdsPorMatriculas(
+    destinoResponsaveis.map((srv) => srv.matricula),
+  );
 
   await criarNotificacoes({
     tipo: "SAIDA_TOMBO",
-    titulo: "Saída de tombos registrada",
-    mensagem: `${tombosInfo.length} tombo(s) movimentado(s) de ${movimentacao.unidadeOrigem.descricao} para ${movimentacao.unidadeDestino.descricao}.`,
+    titulo: "Confirmação de movimentação pendente",
+    mensagem: `${tombosInfo.length} tombo(s) aguardando confirmação de entrada em ${movimentacao.unidadeDestino.descricao}.`,
     link: `/movimentacao/${movimentacao.id}`,
     usuarioDestinoIds: usuarioIds,
   });

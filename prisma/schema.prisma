@@ -41,8 +41,8 @@ model Unidade {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  usuarios               Usuario[]
   setores                Setor[]
-  servidores             Servidor[]
   tombos                 Tombo[]
   movimentacoesOrigem    Movimentacao[] @relation("UnidadeOrigem")
   movimentacoesDestino   Movimentacao[] @relation("UnidadeDestino")
@@ -57,9 +57,9 @@ model Setor {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  unidade Unidade @relation(fields: [unidadeId], references: [id])
-  tombos  Tombo[]
-  servidores           ServidorSetor[]
+  unidade              Unidade @relation(fields: [unidadeId], references: [id])
+  tombos               Tombo[]
+  usuarios             Usuario[]
   movimentacoesOrigem  Movimentacao[] @relation("SetorOrigem")
   movimentacoesDestino Movimentacao[] @relation("SetorDestino")
 
@@ -67,81 +67,59 @@ model Setor {
   @@index([unidadeId])
 }
 
-model Servidor {
-  id                 String   @id @default(cuid())
-  matricula          String   @unique
-  nome               String
-  email              String?
-  unidadeId          String
-  responsavelUnidade Boolean  @default(false)
-  ativo              Boolean  @default(true)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-
-  unidade           Unidade        @relation(fields: [unidadeId], references: [id])
-  tombosResponsavel Tombo[]
-  setores           ServidorSetor[]
-
-  @@index([matricula])
-  @@index([unidadeId])
-}
-
-model ServidorSetor {
-  id         String   @id @default(cuid())
-  servidorId String
-  setorId    String
-  createdAt  DateTime @default(now())
-
-  servidor Servidor @relation(fields: [servidorId], references: [id], onDelete: Cascade)
-  setor    Setor    @relation(fields: [setorId], references: [id], onDelete: Cascade)
-
-  @@unique([servidorId, setorId])
-  @@index([servidorId])
-  @@index([setorId])
-}
-
 model Tombo {
-  id                    String   @id @default(cuid())
-  numero                String   @unique
-  descricaoMaterial     String
-  codigoFornecedor      String?
-  nomeFornecedor        String?
-  unidadeId             String?
-  setorId               String?
-  servidorResponsavelId String?
-  saida                 String?
-  ativo                 Boolean  @default(true)
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  id                     String   @id @default(cuid())
+  numero                 String   @unique
+  descricaoMaterial      String
+  codigoFornecedor       String?
+  nomeFornecedor         String?
+  unidadeId              String?
+  setorId                String?
+  usuarioResponsavelId   String?
+  matriculaResponsavel   String?
+  nomeResponsavel        String?
+  saida                  String?
+  ativo                  Boolean  @default(true)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
 
-  unidade            Unidade?          @relation(fields: [unidadeId], references: [id])
-  setor              Setor?            @relation(fields: [setorId], references: [id])
-  servidorResponsavel Servidor?        @relation(fields: [servidorResponsavelId], references: [id])
-  itensMovimentacao  ItemMovimentacao[]
+  unidade              Unidade? @relation(fields: [unidadeId], references: [id])
+  setor                Setor?   @relation(fields: [setorId], references: [id])
+  usuarioResponsavel   Usuario? @relation("TomboUsuarioResponsavel", fields: [usuarioResponsavelId], references: [id], onDelete: SetNull)
+  itensMovimentacao     ItemMovimentacao[]
 
   @@index([numero])
   @@index([unidadeId])
-  @@index([servidorResponsavelId])
+  @@index([usuarioResponsavelId])
   @@index([setorId])
   @@index([unidadeId, ativo])
 }
 
 model Usuario {
-  id        String        @id @default(cuid())
-  matricula String        @unique
-  nome      String
-  perfil    PerfilUsuario
-  ativo     Boolean       @default(true)
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
+  id                   String        @id @default(cuid())
+  matricula            String        @unique
+  nome                 String
+  perfil               PerfilUsuario
+  ativo                Boolean       @default(true)
+  email                String?
+  unidadeId            String?
+  setorId              String?
+  responsavelUnidade   Boolean       @default(false)
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
 
-  movimentacoesTecnico    Movimentacao[]   @relation("TecnicoMovimentacao")
-  movimentacoesRegistro   Movimentacao[]   @relation("RegistroSicam")
-  auditLogs               AuditLog[]
-  notificacoes            Notificacao[]
-  importacoesCSV          ImportacaoCSV[]
+  unidade                Unidade?         @relation(fields: [unidadeId], references: [id], onDelete: SetNull)
+  setor                  Setor?           @relation(fields: [setorId], references: [id], onDelete: SetNull)
+  tombosComoResponsavel  Tombo[]          @relation("TomboUsuarioResponsavel")
+  movimentacoesTecnico   Movimentacao[]   @relation("TecnicoMovimentacao")
+  movimentacoesRegistro  Movimentacao[]   @relation("RegistroSicam")
+  auditLogs              AuditLog[]
+  notificacoes           Notificacao[]
+  importacoesCSV         ImportacaoCSV[]
 
   @@index([matricula])
+  @@index([unidadeId])
+  @@index([setorId])
 }
 
 model Movimentacao {

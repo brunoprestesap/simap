@@ -90,7 +90,7 @@ export async function buscarMovimentacaoDetalhada(id: string) {
           tombo: {
             include: {
               setor: { select: { id: true, nome: true } },
-              servidorResponsavel: { select: { id: true, nome: true } },
+              usuarioResponsavel: { select: { id: true, nome: true } },
             },
           },
         },

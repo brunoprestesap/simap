@@ -26,7 +26,7 @@ export function ResponsavelHome({
   firstName,
   data,
 }: ResponsavelHomeProps) {
-  if (!data.servidor) {
+  if (!data.lotacao) {
     return (
       <div className="space-y-8">
         <HomeHero
@@ -124,7 +124,7 @@ export function ResponsavelHome({
           {
             href: "/movimentacao/historico",
             title: "Histórico de movimentações",
-            description: "Consulte registros e acompanhe o andamento das saídas.",
+            description: "Consulte registros e acompanhe confirmações de entrada.",
             icon: ArrowLeftRight,
           },
           {
@@ -139,13 +139,13 @@ export function ResponsavelHome({
       <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
         <MovementPreviewList
           title="Pendências da unidade"
-          description="Movimentações mais recentes que envolvem confirmação da origem."
+          description="Movimentações recentes aguardando confirmação pela unidade de destino."
           items={data.pendenciasRecentes.map((mov) => ({
             id: mov.id,
             href: `/movimentacao/${mov.id}`,
             eyebrow: `#${mov.codigo.slice(-6).toUpperCase()}`,
-            title: `Destino: ${mov.destino}`,
-            description: `Saída registrada a partir de ${mov.origem}.`,
+            title: `Origem: ${mov.origem}`,
+            description: `Entrada prevista em ${mov.destino}.`,
             meta: `${mov.tombos} ${mov.tombos === 1 ? "tombo" : "tombos"} • ${formatDateTimeBR(
               mov.createdAt,
             )}`,
@@ -176,10 +176,10 @@ export function ResponsavelHome({
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-foreground">
-                    A confirmação é feita pelo link enviado por e-mail.
+                    A confirmação pode ser feita por e-mail ou pela tela da movimentação.
                   </p>
                   <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                    Use a área logada para acompanhar pendências e notificações, mas a confirmação formal da saída continua sendo feita pelo link público encaminhado ao responsável da origem.
+                    O responsável da unidade de destino pode confirmar pelo link recebido por e-mail ou direto na aplicação, dentro do detalhe da movimentação pendente.
                   </p>
                 </div>
               </div>

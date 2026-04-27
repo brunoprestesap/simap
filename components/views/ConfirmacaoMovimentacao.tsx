@@ -135,7 +135,7 @@ export function ConfirmacaoMovimentacao({
       tomboIds: tombos.map((t) => t.id),
       unidadeDestinoId,
       setorOrigemId: setorOrigem?.id || undefined,
-      setorDestinoId: setorDestinoId || undefined,
+      setorDestinoId,
     });
 
     if (!parsed.success) {
@@ -233,7 +233,7 @@ export function ConfirmacaoMovimentacao({
           <Button
             size="lg"
             onClick={handleConfirm}
-            disabled={!unidadeDestinoId || isLoading}
+            disabled={!unidadeDestinoId || !setorDestinoId || isLoading}
             className="w-full sm:w-auto"
           >
             {isLoading ? (

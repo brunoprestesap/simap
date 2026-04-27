@@ -187,8 +187,8 @@ export async function getTecnicoHomeData(userId: string) {
 }
 
 export async function getResponsavelHomeData(userId: string, matricula: string) {
-  const servidor = await prisma.servidor.findFirst({
-    where: { matricula, ativo: true },
+  const usuarioLote = await prisma.usuario.findFirst({
+    where: { matricula, ativo: true, unidadeId: { not: null } },
     include: {
       unidade: { select: { id: true, descricao: true } },
     },
@@ -196,9 +196,9 @@ export async function getResponsavelHomeData(userId: string, matricula: string) 
 
   const notifications = await getRecentNotifications(userId);
 
-  if (!servidor) {
+  if (!usuarioLote?.unidadeId || !usuarioLote.unidade) {
     return {
-      servidor: null,
+      lotacao: null,
       pendentesConfirmacao: 0,
       patrimonioTotal: 0,
       patrimonioEmMovimentacao: 0,
@@ -208,29 +208,31 @@ export async function getResponsavelHomeData(userId: string, matricula: string) 
     };
   }
 
+  const unidadeId = usuarioLote.unidadeId;
+
   const [
     pendentesConfirmacao,
     patrimonioTotal,
     patrimonioEmMovimentacao,
     pendenciasRecentes,
   ] = await Promise.all([
-    contarPendentesConfirmacao(servidor.unidadeId),
+    contarPendentesConfirmacao(unidadeId),
     prisma.tombo.count({
       where: {
-        unidadeId: servidor.unidadeId,
+        unidadeId,
         ativo: true,
       },
     }),
     prisma.tombo.count({
       where: {
-        unidadeId: servidor.unidadeId,
+        unidadeId,
         ativo: true,
         itensMovimentacao: TOMBO_EM_MOVIMENTACAO_WHERE,
       },
     }),
     prisma.movimentacao.findMany({
       where: {
-        unidadeOrigemId: servidor.unidadeId,
+        unidadeDestinoId: unidadeId,
         status: { in: [...MOVIMENTACAO_STATUS_EM_ANDAMENTO] },
       },
       orderBy: { createdAt: "desc" },
@@ -244,9 +246,9 @@ export async function getResponsavelHomeData(userId: string, matricula: string) 
   ]);
 
   return {
-    servidor: {
-      unidadeId: servidor.unidadeId,
-      unidadeNome: servidor.unidade.descricao,
+    lotacao: {
+      unidadeId,
+      unidadeNome: usuarioLote.unidade.descricao,
     },
     pendentesConfirmacao,
     patrimonioTotal,

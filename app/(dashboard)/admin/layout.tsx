@@ -20,7 +20,7 @@ export default async function AdminLayout({
       <div>
         <h2 className="text-lg font-semibold text-foreground">Administração</h2>
         <p className="text-sm text-muted-foreground">
-          Gerencie unidades, setores, servidores e perfis de acesso
+          Gerencie unidades, setores, lotação de usuários e perfis de acesso
         </p>
       </div>
 

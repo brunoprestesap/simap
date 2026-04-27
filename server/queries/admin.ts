@@ -9,7 +9,7 @@ export async function listarUnidadesAdmin(busca?: string) {
     orderBy: { descricao: "asc" },
     take: 200,
     include: {
-      _count: { select: { setores: true, servidores: true, tombos: true } },
+      _count: { select: { setores: true, usuarios: true, tombos: true } },
     },
   });
 }
@@ -26,17 +26,16 @@ export async function listarSetoresAdmin(busca?: string) {
   });
 }
 
-export async function listarServidoresAdmin(busca?: string) {
-  return prisma.servidor.findMany({
+/** Usuários com dados de lotação patrimonial (unidade/setor no cadastro SIMAP). */
+export async function listarUsuariosLotacaoAdmin(busca?: string) {
+  return prisma.usuario.findMany({
     where: buildSearchFilter(busca, ["matricula", "nome"]),
     orderBy: { nome: "asc" },
     take: 200,
     include: {
       unidade: { select: { id: true, descricao: true } },
-      setores: {
-        include: { setor: { select: { id: true, nome: true } } },
-      },
-      _count: { select: { tombosResponsavel: true } },
+      setor: { select: { id: true, nome: true } },
+      _count: { select: { tombosComoResponsavel: true } },
     },
   });
 }

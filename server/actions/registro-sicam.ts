@@ -2,6 +2,7 @@
 
 import { z } from "zod/v4";
 import { requireRoleAction } from "@/lib/auth-guard";
+import { parseDateOnlyLocal } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { registrarAuditoria } from "@/server/services/audit";
 
@@ -28,7 +29,7 @@ export async function registrarNoSicam(input: z.input<typeof registroSicamSchema
     parsed.data;
 
   // Validate date is not in the future
-  const dataRegistro = new Date(dataRegistroSicam);
+  const dataRegistro = parseDateOnlyLocal(dataRegistroSicam);
   if (dataRegistro > new Date()) {
     return { success: false, error: "A data do registro não pode ser futura." };
   }
@@ -45,7 +46,9 @@ export async function registrarNoSicam(input: z.input<typeof registroSicamSchema
             select: {
               id: true,
               numero: true,
-              servidorResponsavel: { select: { id: true, nome: true, matricula: true } },
+              usuarioResponsavel: { select: { id: true, nome: true, matricula: true } },
+              matriculaResponsavel: true,
+              nomeResponsavel: true,
             },
           },
         },
@@ -64,6 +67,31 @@ export async function registrarNoSicam(input: z.input<typeof registroSicamSchema
     };
   }
 
+  // Resolve novo responsável patrimonial no destino:
+  // 1) usuário ativo da mesma unidade e mesmo setor de destino
+  // 2) fallback para responsável da unidade destino
+  const responsavelSetorDestino = movimentacao.setorDestinoId
+    ? await prisma.usuario.findFirst({
+        where: {
+          ativo: true,
+          unidadeId: movimentacao.unidadeDestinoId,
+          setorId: movimentacao.setorDestinoId,
+        },
+        select: { id: true, matricula: true, nome: true },
+      })
+    : null;
+
+  const responsavelUnidadeDestino =
+    responsavelSetorDestino ??
+    (await prisma.usuario.findFirst({
+      where: {
+        ativo: true,
+        unidadeId: movimentacao.unidadeDestinoId,
+        responsavelUnidade: true,
+      },
+      select: { id: true, matricula: true, nome: true },
+    }));
+
   // Update movimentacao status + SICAM data
   await prisma.movimentacao.update({
     where: { id: movimentacaoId },
@@ -76,11 +104,17 @@ export async function registrarNoSicam(input: z.input<typeof registroSicamSchema
     },
   });
 
-  // Update tombo lotação (move to destination unit)
+  // Update tombo lotação (move to destination unit/setor)
   const tomboIds = movimentacao.itens.map((i) => i.tomboId);
   await prisma.tombo.updateMany({
     where: { id: { in: tomboIds } },
-    data: { unidadeId: movimentacao.unidadeDestinoId },
+    data: {
+      unidadeId: movimentacao.unidadeDestinoId,
+      setorId: movimentacao.setorDestinoId ?? null,
+      usuarioResponsavelId: responsavelUnidadeDestino?.id ?? null,
+      matriculaResponsavel: responsavelUnidadeDestino?.matricula ?? null,
+      nomeResponsavel: responsavelUnidadeDestino?.nome ?? null,
+    },
   });
 
   // Audit log
@@ -104,7 +138,14 @@ export async function registrarNoSicam(input: z.input<typeof registroSicamSchema
 
   // Get origin and destination responsible users
   const responsaveisMatriculas = [
-    ...new Set(movimentacao.itens.filter((i) => i.tombo.servidorResponsavel).map((i) => i.tombo.servidorResponsavel!.matricula)),
+    ...new Set(
+      movimentacao.itens
+        .map((i) => {
+          const t = i.tombo;
+          return t.usuarioResponsavel?.matricula ?? t.matriculaResponsavel ?? null;
+        })
+        .filter((m): m is string => Boolean(m)),
+    ),
   ];
 
   const usuariosResponsaveis = await prisma.usuario.findMany({

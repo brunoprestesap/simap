@@ -37,11 +37,13 @@ function createTombo(numero: string): TomboSelecionado {
       codigo: "10",
       nome: "Sala 1",
     },
-    servidorResponsavel: {
-      id: "servidor-1",
-      nome: "Servidor Exemplo",
+    usuarioResponsavel: {
+      id: "usuario-1",
+      nome: "Usuário Exemplo",
       matricula: "AP20151",
     },
+    matriculaResponsavel: "AP20151",
+    nomeResponsavel: "Usuário Exemplo",
   };
 }
 

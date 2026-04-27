@@ -13,6 +13,10 @@ interface ScannerProps {
   active?: boolean;
 }
 
+interface ScannerInstance {
+  stop: () => Promise<void>;
+}
+
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
@@ -112,8 +116,7 @@ export function Scanner({ onScan, onError, active = true }: ScannerProps) {
     code: "",
     at: 0,
   });
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const scannerRef = useRef<any>(null);
+  const scannerRef = useRef<ScannerInstance | null>(null);
 
   // Keep callback refs fresh
   useEffect(() => {

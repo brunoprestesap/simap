@@ -1,5 +1,6 @@
 import type { buscarMovimentacaoDetalhada } from "@/server/queries/movimentacao";
 import { formatDateBR } from "@/lib/format";
+import { nomeResponsavelExibicao } from "@/lib/tombo-responsavel";
 import { User } from "lucide-react";
 
 export type MovimentacaoDetalhada = NonNullable<
@@ -128,7 +129,7 @@ export function TombosTable({
                   {item.tombo.setor?.nome || "—"}
                 </td>
                 <td className="py-2.5 text-muted-foreground">
-                  {item.tombo.servidorResponsavel?.nome ?? "—"}
+                  {nomeResponsavelExibicao(item.tombo) ?? "—"}
                 </td>
               </tr>
             ))}

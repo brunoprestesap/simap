@@ -14,9 +14,7 @@ async function main() {
   await prisma.itemMovimentacao.deleteMany();
   await prisma.movimentacao.deleteMany();
   await prisma.tombo.deleteMany();
-  await prisma.servidorSetor.deleteMany();
   await prisma.usuario.deleteMany();
-  await prisma.servidor.deleteMany();
   await prisma.setor.deleteMany();
   await prisma.unidade.deleteMany();
   console.log("  Dados anteriores removidos.");
@@ -56,53 +54,80 @@ async function main() {
     prisma.setor.create({ data: { codigo: "SEMAP-ALM", nome: "Almoxarifado", unidadeId: semap.id } }),
   ]);
 
-  // ─── Servidores ──────────────────────────────────────────
-  const servidores = await Promise.all([
-    prisma.servidor.create({ data: { matricula: "AP20151", nome: "Carlos Eduardo Silva", email: "carlos.silva@jfap.jus.br", unidadeId: nti.id, responsavelUnidade: true } }),
-    prisma.servidor.create({ data: { matricula: "AP20152", nome: "Ana Paula Souza", email: "ana.souza@jfap.jus.br", unidadeId: nti.id } }),
-    prisma.servidor.create({ data: { matricula: "AP20153", nome: "Roberto Oliveira", email: "roberto.oliveira@jfap.jus.br", unidadeId: vara1.id } }),
-    prisma.servidor.create({ data: { matricula: "AP20154", nome: "Maria Fernanda Costa", email: "maria.costa@jfap.jus.br", unidadeId: vara1.id } }),
-    prisma.servidor.create({ data: { matricula: "AP20155", nome: "João Pedro Santos", email: "joao.santos@jfap.jus.br", unidadeId: vara2.id, responsavelUnidade: true } }),
-    prisma.servidor.create({ data: { matricula: "AP20156", nome: "Luciana Rodrigues", email: "luciana.rodrigues@jfap.jus.br", unidadeId: vara2.id } }),
-    prisma.servidor.create({ data: { matricula: "AP20157", nome: "Fernando Almeida", email: "fernando.almeida@jfap.jus.br", unidadeId: semap.id, responsavelUnidade: true } }),
-    prisma.servidor.create({ data: { matricula: "AP20158", nome: "Patrícia Lima", email: "patricia.lima@jfap.jus.br", unidadeId: semap.id } }),
-    prisma.servidor.create({ data: { matricula: "AP20159", nome: "Ricardo Mendes", email: "ricardo.mendes@jfap.jus.br", unidadeId: secad.id } }),
-    prisma.servidor.create({ data: { matricula: "AP20160", nome: "Juliana Pereira", email: "juliana.pereira@jfap.jus.br", unidadeId: secad.id } }),
-  ]);
+  const [secadAdm, , ntiInfra, , vara1Gab, vara1Sec, vara2Gab, , semapPat] = setores;
 
-  // ─── Vinculações Servidor-Setor ────────────────────────
-  // AP20152 (Ana Paula / NTI) → apenas setor Infraestrutura
-  // AP20153 (Roberto / 1ªVara) → Gabinete + Secretaria
-  // AP20154 (Maria / 1ªVara) → apenas Secretaria
-  // AP20156 (Luciana / 2ªVara) → apenas Gabinete
-  // AP20158 (Patrícia / SEMAP) → apenas Patrimônio
-  // AP20159 (Ricardo / SECAD) → Administração + RH
-  // AP20160 (Juliana / SECAD) → apenas RH
-  const [secadAdm, secadRh, ntiInfra, , vara1Gab, vara1Sec, vara2Gab, , semapPat] = setores;
-  await prisma.servidorSetor.createMany({
-    data: [
-      { servidorId: servidores[1].id, setorId: ntiInfra.id },
-      { servidorId: servidores[2].id, setorId: vara1Gab.id },
-      { servidorId: servidores[2].id, setorId: vara1Sec.id },
-      { servidorId: servidores[3].id, setorId: vara1Sec.id },
-      { servidorId: servidores[5].id, setorId: vara2Gab.id },
-      { servidorId: servidores[7].id, setorId: semapPat.id },
-      { servidorId: servidores[8].id, setorId: secadAdm.id },
-      { servidorId: servidores[8].id, setorId: secadRh.id },
-      { servidorId: servidores[9].id, setorId: secadRh.id },
-    ],
-  });
-
-  // ─── Usuários (1 de cada perfil) ────────────────────────
+  // ─── Usuários (perfil + lotação patrimonial) ─────────────
   const usuarios = await Promise.all([
-    prisma.usuario.create({ data: { matricula: "AP20151", nome: "Carlos Eduardo Silva", perfil: PerfilUsuario.TECNICO_TI } }),
-    prisma.usuario.create({ data: { matricula: "AP20153", nome: "Roberto Oliveira", perfil: PerfilUsuario.SERVIDOR_RESPONSAVEL } }),
-    prisma.usuario.create({ data: { matricula: "AP20157", nome: "Fernando Almeida", perfil: PerfilUsuario.SERVIDOR_SEMAP } }),
-    prisma.usuario.create({ data: { matricula: "AP20159", nome: "Ricardo Mendes", perfil: PerfilUsuario.GESTOR_ADMIN } }),
-    prisma.usuario.create({ data: { matricula: "AP20256", nome: "Bruno Prestes", perfil: PerfilUsuario.SERVIDOR_RESPONSAVEL } }),
+    prisma.usuario.create({
+      data: {
+        matricula: "AP20151",
+        nome: "Carlos Eduardo Silva",
+        perfil: PerfilUsuario.TECNICO_TI,
+        email: "carlos.silva@jfap.jus.br",
+        unidadeId: nti.id,
+        setorId: ntiInfra.id,
+        responsavelUnidade: true,
+      },
+    }),
+    prisma.usuario.create({
+      data: {
+        matricula: "AP20153",
+        nome: "Roberto Oliveira",
+        perfil: PerfilUsuario.SERVIDOR_RESPONSAVEL,
+        email: "roberto.oliveira@jfap.jus.br",
+        unidadeId: vara1.id,
+        setorId: vara1Sec.id,
+        responsavelUnidade: false,
+      },
+    }),
+    prisma.usuario.create({
+      data: {
+        matricula: "AP20155",
+        nome: "João Pedro Santos",
+        perfil: PerfilUsuario.TECNICO_TI,
+        email: "joao.santos@jfap.jus.br",
+        unidadeId: vara2.id,
+        setorId: vara2Gab.id,
+        responsavelUnidade: true,
+      },
+    }),
+    prisma.usuario.create({
+      data: {
+        matricula: "AP20157",
+        nome: "Fernando Almeida",
+        perfil: PerfilUsuario.SERVIDOR_SEMAP,
+        email: "fernando.almeida@jfap.jus.br",
+        unidadeId: semap.id,
+        setorId: semapPat.id,
+        responsavelUnidade: true,
+      },
+    }),
+    prisma.usuario.create({
+      data: {
+        matricula: "AP20159",
+        nome: "Ricardo Mendes",
+        perfil: PerfilUsuario.GESTOR_ADMIN,
+        email: "ricardo.mendes@jfap.jus.br",
+        unidadeId: secad.id,
+        setorId: secadAdm.id,
+        responsavelUnidade: false,
+      },
+    }),
+    prisma.usuario.create({
+      data: {
+        matricula: "AP20256",
+        nome: "Bruno Prestes",
+        perfil: PerfilUsuario.SERVIDOR_RESPONSAVEL,
+        email: "bruno.prestes@jfap.jus.br",
+        unidadeId: nti.id,
+        setorId: ntiInfra.id,
+        responsavelUnidade: true,
+      },
+    }),
   ]);
 
-  const [tecnico, responsavel, semapUser, gestor] = usuarios;
+  const [tecnico, responsavel, tecnicoResponsavelUnidade, semapUser, gestor, _brunoNti] =
+    usuarios;
 
   // ─── Tombos (50) ─────────────────────────────────────────
   const materiais = [
@@ -115,14 +140,19 @@ async function main() {
     "Cofre Digital", "Gaveteiro Móvel 3 gavetas",
   ];
 
+  const usuariosComLote = await prisma.usuario.findMany({
+    where: { unidadeId: { not: null } },
+    select: { id: true, matricula: true, nome: true, unidadeId: true },
+  });
+
   const tombos = [];
   for (let i = 0; i < 50; i++) {
     const unidadeIdx = i % 5;
     const unidade = unidades[unidadeIdx];
     const setoresUnidade = setores.filter((s) => s.unidadeId === unidade.id);
     const setor = setoresUnidade[i % setoresUnidade.length];
-    const servidoresUnidade = servidores.filter((s) => s.unidadeId === unidade.id);
-    const servidor = servidoresUnidade[i % servidoresUnidade.length];
+    const pool = usuariosComLote.filter((u) => u.unidadeId === unidade.id);
+    const resp = pool[i % pool.length];
 
     tombos.push(
       prisma.tombo.create({
@@ -133,7 +163,9 @@ async function main() {
           nomeFornecedor: `Fornecedor ${String.fromCharCode(65 + (i % 10))}`,
           unidadeId: unidade.id,
           setorId: setor.id,
-          servidorResponsavelId: servidor.id,
+          usuarioResponsavelId: resp.id,
+          matriculaResponsavel: resp.matricula,
+          nomeResponsavel: resp.nome,
         },
       }),
     );
@@ -227,6 +259,19 @@ async function main() {
     },
   });
 
+  const mov6 = await prisma.movimentacao.create({
+    data: {
+      unidadeOrigemId: vara1.id,
+      unidadeDestinoId: nti.id,
+      tecnicoId: tecnico.id,
+      status: StatusMovimentacao.PENDENTE_CONFIRMACAO,
+      tokenExpiraEm: tokenExpiry,
+      itens: {
+        create: [{ tomboId: tombosCriados[22].id }],
+      },
+    },
+  });
+
   // ─── Notificações (10) ──────────────────────────────────
   await Promise.all([
     prisma.notificacao.create({ data: { tipo: TipoNotificacao.SAIDA_TOMBO, titulo: "Saída de tombo registrada", mensagem: "O tombo 100001 foi movimentado do NTI para a 1ª Vara.", link: `/movimentacao/${mov1.id}`, usuarioDestinoId: responsavel.id } }),
@@ -235,6 +280,7 @@ async function main() {
     prisma.notificacao.create({ data: { tipo: TipoNotificacao.REGISTRO_SICAM, titulo: "Registro no SICAM concluído", mensagem: "Movimentação registrada no SICAM com protocolo SICAM-2026-001234.", link: `/movimentacao/${mov3.id}`, usuarioDestinoId: tecnico.id, lida: true } }),
     prisma.notificacao.create({ data: { tipo: TipoNotificacao.ENTRADA_TOMBO, titulo: "Entrada de tombo", mensagem: "O tombo 100002 foi recebido na 2ª Vara.", link: `/movimentacao/${mov2.id}`, usuarioDestinoId: responsavel.id } }),
     prisma.notificacao.create({ data: { tipo: TipoNotificacao.SAIDA_TOMBO, titulo: "Saída de tombos", mensagem: "3 tombos foram movimentados da SEMAP para a SECAD.", link: `/movimentacao/${mov5.id}`, usuarioDestinoId: semapUser.id } }),
+    prisma.notificacao.create({ data: { tipo: TipoNotificacao.SAIDA_TOMBO, titulo: "Confirmação pendente no NTI", mensagem: "1 tombo foi movimentado para o NTI e aguarda confirmação.", link: `/movimentacao/${mov6.id}`, usuarioDestinoId: tecnicoResponsavelUnidade.id } }),
     prisma.notificacao.create({ data: { tipo: TipoNotificacao.IMPORTACAO_CSV, titulo: "Importação CSV concluída", mensagem: "50 registros importados com sucesso.", usuarioDestinoId: tecnico.id, lida: true } }),
     prisma.notificacao.create({ data: { tipo: TipoNotificacao.SAIDA_TOMBO, titulo: "Atenção: movimentação não confirmada", mensagem: "A movimentação da SECAD para NTI não foi confirmada no prazo.", link: `/movimentacao/${mov4.id}`, usuarioDestinoId: gestor.id } }),
     prisma.notificacao.create({ data: { tipo: TipoNotificacao.CONFIRMACAO_REALIZADA, titulo: "Confirmação pendente", mensagem: "Há movimentações aguardando sua confirmação.", link: "/movimentacao", usuarioDestinoId: responsavel.id } }),
@@ -255,12 +301,10 @@ async function main() {
   console.log("Seed completed successfully!");
   console.log(`  - ${unidades.length} unidades`);
   console.log(`  - ${setores.length} setores`);
-  console.log(`  - ${servidores.length} servidores (3 responsáveis por unidade inteira)`);
-  console.log(`  - 9 vinculações servidor-setor`);
-  console.log(`  - 4 usuários`);
+  console.log(`  - ${usuarios.length} usuários com lotação`);
   console.log(`  - ${tombosCriados.length} tombos`);
-  console.log(`  - 5 movimentações`);
-  console.log(`  - 10 notificações`);
+  console.log(`  - 6 movimentações`);
+  console.log(`  - 11 notificações`);
 }
 
 main()

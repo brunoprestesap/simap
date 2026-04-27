@@ -1,6 +1,7 @@
 /**
  * Reusable filter builders for Prisma queries.
  */
+import { parseDateOnlyLocal } from "@/lib/format";
 
 /**
  * Builds a case-insensitive search filter for multiple fields.
@@ -26,9 +27,13 @@ export function buildDateRangeFilter(
 ): { gte?: Date; lte?: Date } | undefined {
   if (!inicio && !fim) return undefined;
   const filter: { gte?: Date; lte?: Date } = {};
-  if (inicio) filter.gte = new Date(inicio);
+  if (inicio) {
+    const start = parseDateOnlyLocal(inicio);
+    start.setHours(0, 0, 0, 0);
+    filter.gte = start;
+  }
   if (fim) {
-    const end = new Date(fim);
+    const end = parseDateOnlyLocal(fim);
     end.setHours(23, 59, 59, 999);
     filter.lte = end;
   }

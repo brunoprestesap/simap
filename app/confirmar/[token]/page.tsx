@@ -88,7 +88,7 @@ export default async function ConfirmarPage({
     <div className="space-y-4">
       <div className="rounded-lg border border-border bg-card p-6">
         <h2 className="text-lg font-semibold text-foreground mb-4">
-          Confirmação de Saída
+          Confirmação de Entrada
         </h2>
 
         {/* Origin → Destination */}

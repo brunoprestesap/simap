@@ -88,13 +88,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               return null;
             }
 
-            const servidor = await prisma.servidor.findUnique({
-              where: { matricula },
-              select: { nome: true },
-            });
-
-            const nome =
-              ldapDisplayName?.trim() || servidor?.nome || matricula;
+            const nome = ldapDisplayName?.trim() || matricula;
             const perfil = getLdapDefaultProvisionPerfil();
 
             try {

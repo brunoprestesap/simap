@@ -12,10 +12,13 @@ export default function AuthLayout({
         <div>
           {/* Container branco com bordas arredondadas para garantir o contraste e visibilidade da logo */}
           <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-white p-3 shadow-lg">
-            <img
+            <Image
               src="/logo-simap.svg"
               alt="SIMAP Logo"
+              width={56}
+              height={56}
               className="h-full w-full object-contain"
+              priority
             />
           </div>
         </div>
@@ -41,10 +44,13 @@ export default function AuthLayout({
           <div className="text-center lg:text-left">
             {/* Mobile logo */}
             <div className="mb-8 flex justify-center lg:hidden">
-              <img
+              <Image
                 src="/logo-simap.svg"
                 alt="SIMAP"
+                width={80}
+                height={80}
                 className="h-20 w-20 object-contain"
+                priority
               />
             </div>
             

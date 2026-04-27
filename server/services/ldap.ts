@@ -10,7 +10,7 @@ function normalizeMatricula(matricula: string): string {
 }
 
 /**
- * Busca e-mail de um servidor pela matrícula.
+ * Busca e-mail de um usuário (cadastro SIMAP) pela matrícula.
  * Com LDAP configurado, consulta o diretório; senão (ou se não houver mail), usa o banco.
  */
 export async function buscarEmailPorMatricula(
@@ -23,15 +23,15 @@ export async function buscarEmailPorMatricula(
     if (fromDirectory) return fromDirectory;
   }
 
-  const servidor = await prisma.servidor.findUnique({
+  const usuario = await prisma.usuario.findUnique({
     where: { matricula: key },
     select: { email: true },
   });
-  return servidor?.email ?? null;
+  return usuario?.email ?? null;
 }
 
 /**
- * Busca e-mails de múltiplos servidores; LDAP quando disponível, com fallback ao banco.
+ * Busca e-mails por matrícula; LDAP quando disponível, com fallback ao cadastro de usuário.
  */
 export async function buscarEmailsPorMatriculas(
   matriculas: string[],
@@ -51,13 +51,13 @@ export async function buscarEmailsPorMatriculas(
   const stillMissing = normalized.filter((m) => !result.has(m));
   if (stillMissing.length === 0) return result;
 
-  const servidores = await prisma.servidor.findMany({
+  const usuarios = await prisma.usuario.findMany({
     where: { matricula: { in: stillMissing } },
     select: { matricula: true, email: true },
   });
 
-  for (const s of servidores) {
-    if (s.email) result.set(s.matricula, s.email);
+  for (const u of usuarios) {
+    if (u.email) result.set(u.matricula, u.email);
   }
 
   return result;

@@ -1,4 +1,33 @@
 import { test, expect } from "@playwright/test";
+import "dotenv/config";
+import pg from "pg";
+
+async function buscarMovimentacaoPendentePorMatriculaDestino(matricula: string) {
+  const client = new pg.Client({
+    connectionString: process.env.DATABASE_URL,
+  });
+
+  await client.connect();
+  try {
+    const result = await client.query<{ id: string }>(
+      `
+        SELECT m.id
+        FROM "Movimentacao" m
+        JOIN "Usuario" s ON s."unidadeId" = m."unidadeDestinoId" AND s.ativo = true
+        WHERE s.matricula = $1
+          AND m.status = 'PENDENTE_CONFIRMACAO'
+          AND m."tokenExpiraEm" > NOW()
+        ORDER BY m."createdAt" DESC
+        LIMIT 1
+      `,
+      [matricula],
+    );
+
+    return result.rows[0]?.id ?? null;
+  } finally {
+    await client.end();
+  }
+}
 
 test.describe("Confirmação Pública", () => {
   test("deve exibir erro para token inválido", async ({ page }) => {
@@ -17,5 +46,49 @@ test.describe("Confirmação Pública", () => {
     // Here we verify the confirmation layout renders.
     await page.goto("/confirmar/any-token");
     await expect(page.getByText("SIMAP")).toBeVisible();
+  });
+});
+
+test.describe("Confirmação Interna", () => {
+  test("deve renderizar botão para usuário autorizado do destino", async ({
+    page,
+  }) => {
+    await page.goto("/login");
+    await page.fill('input[name="matricula"]', "AP20153");
+    await page.fill('input[name="senha"]', "senha123");
+    await page.click('button[type="submit"]');
+    await page.waitForURL("/home", { timeout: 15_000 });
+
+    const movimentacaoId = await buscarMovimentacaoPendentePorMatriculaDestino(
+      "AP20153",
+    );
+    expect(movimentacaoId).toBeTruthy();
+
+    await page.goto(`/movimentacao/${movimentacaoId}`);
+    await expect(
+      page.getByRole("button", { name: "Confirmar movimentação" }),
+    ).toBeVisible();
+  });
+
+  test("deve exibir aviso quando usuário não tem permissão para confirmar", async ({
+    page,
+  }) => {
+    await page.goto("/login");
+    await page.fill('input[name="matricula"]', "AP20159");
+    await page.fill('input[name="senha"]', "senha123");
+    await page.click('button[type="submit"]');
+    await page.waitForURL("/home", { timeout: 15_000 });
+
+    const movimentacaoId = await buscarMovimentacaoPendentePorMatriculaDestino(
+      "AP20153",
+    );
+    expect(movimentacaoId).toBeTruthy();
+
+    await page.goto(`/movimentacao/${movimentacaoId}`);
+    await expect(
+      page.getByText(
+        "Esta movimentação está pendente, mas sua conta não possui permissão para confirmar o recebimento.",
+      ),
+    ).toBeVisible();
   });
 });

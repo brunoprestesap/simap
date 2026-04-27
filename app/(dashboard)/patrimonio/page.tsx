@@ -6,15 +6,14 @@ import { PatrimonioList } from "@/components/views/PatrimonioList";
 export default async function PatrimonioPage() {
   const user = await requireAuth();
 
-  // Find the user's associated servidor/unidade
-  const servidor = await prisma.servidor.findFirst({
-    where: { matricula: user.matricula, ativo: true },
+  const usuarioLote = await prisma.usuario.findFirst({
+    where: { matricula: user.matricula, ativo: true, unidadeId: { not: null } },
     include: {
       unidade: { select: { id: true, descricao: true } },
     },
   });
 
-  if (!servidor) {
+  if (!usuarioLote?.unidadeId || !usuarioLote.unidade) {
     return (
       <div className="space-y-6">
         <h2 className="text-lg font-semibold text-foreground">
@@ -27,7 +26,7 @@ export default async function PatrimonioPage() {
     );
   }
 
-  const pendentesConfirmacao = await contarPendentesConfirmacao(servidor.unidadeId);
+  const pendentesConfirmacao = await contarPendentesConfirmacao(usuarioLote.unidadeId);
 
   return (
     <div className="space-y-6">
@@ -35,8 +34,8 @@ export default async function PatrimonioPage() {
         Meus Patrimônios
       </h2>
       <PatrimonioList
-        unidadeId={servidor.unidadeId}
-        unidadeNome={servidor.unidade.descricao}
+        unidadeId={usuarioLote.unidadeId}
+        unidadeNome={usuarioLote.unidade.descricao}
         pendentesConfirmacao={pendentesConfirmacao}
       />
     </div>

@@ -12,6 +12,7 @@ import {
   listarTombos,
   listarSetoresPorUnidade,
 } from "@/server/queries/tombo";
+import { nomeResponsavelExibicao } from "@/lib/tombo-responsavel";
 import { listarUnidadesAtivas } from "@/server/queries/unidade";
 import { Search, Filter, X } from "lucide-react";
 
@@ -81,17 +82,15 @@ export function TombosList() {
   const setorId = searchParams.get("setor") || "";
   const status = searchParams.get("status") || "todos";
   const pagina = Number(searchParams.get("pagina")) || 1;
+  const setoresExibidos = unidadeId ? setores : [];
 
   useEffect(() => {
     listarUnidadesAtivas().then(setUnidades);
   }, []);
 
   useEffect(() => {
-    if (unidadeId) {
-      listarSetoresPorUnidade(unidadeId).then(setSetores);
-    } else {
-      setSetores([]);
-    }
+    if (!unidadeId) return;
+    listarSetoresPorUnidade(unidadeId).then(setSetores);
   }, [unidadeId]);
 
   useEffect(() => {
@@ -179,6 +178,7 @@ export function TombosList() {
               onChange={(e) => {
                 const params: Record<string, string> = { unidade: e.target.value };
                 if (e.target.value !== unidadeId) params.setor = "";
+                if (!e.target.value) setSetores([]);
                 updateParams(params);
               }}
               className="h-8 w-full rounded-md border border-border bg-background px-2 text-sm"
@@ -202,7 +202,7 @@ export function TombosList() {
               className="h-8 w-full rounded-md border border-border bg-background px-2 text-sm disabled:opacity-50"
             >
               <option value="">Todos</option>
-              {setores.map((s) => (
+              {setoresExibidos.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.nome}
                 </option>
@@ -254,9 +254,9 @@ export function TombosList() {
                       Setor: {tombo.setor.nome}
                     </p>
                   )}
-                  {tombo.servidorResponsavel && (
+                  {nomeResponsavelExibicao(tombo) && (
                     <p className="text-xs text-muted-foreground">
-                      Resp: {tombo.servidorResponsavel.nome}
+                      Resp: {nomeResponsavelExibicao(tombo)}
                     </p>
                   )}
                 </div>
@@ -318,7 +318,7 @@ export function TombosList() {
                       {tombo.setor?.nome || "—"}
                     </td>
                     <td className="truncate py-3 pr-4 text-muted-foreground">
-                      {tombo.servidorResponsavel?.nome || "—"}
+                      {nomeResponsavelExibicao(tombo) || "—"}
                     </td>
                     <td className="py-3">
                       <TomboStatusBadge tombo={tombo} />

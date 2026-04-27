@@ -59,7 +59,7 @@ export async function listarPatrimonios(filters: PatrimonioFilters) {
       take: porPagina,
       include: {
         setor: { select: { id: true, nome: true } },
-        servidorResponsavel: { select: { id: true, nome: true } },
+        usuarioResponsavel: { select: { id: true, nome: true } },
         itensMovimentacao: {
           where: {
             movimentacao: {
@@ -87,7 +87,7 @@ export async function listarPatrimonios(filters: PatrimonioFilters) {
 export async function contarPendentesConfirmacao(unidadeId: string) {
   return prisma.movimentacao.count({
     where: {
-      unidadeOrigemId: unidadeId,
+      unidadeDestinoId: unidadeId,
       status: "PENDENTE_CONFIRMACAO",
     },
   });

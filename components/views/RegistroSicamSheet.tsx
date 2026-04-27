@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { FormField, FormInput, FormTextarea } from "@/components/common/FormInput";
 import { FormError } from "@/components/common/FormError";
-import { formatDateBR } from "@/lib/format";
+import { formatDateBR, toDateInputValueLocal } from "@/lib/format";
 import { registrarNoSicam } from "@/server/actions/registro-sicam";
 import { X, CheckCircle2 } from "lucide-react";
 import type { listarBacklog } from "@/server/queries/backlog";
@@ -21,7 +21,7 @@ interface RegistroSicamSheetProps {
 export function RegistroSicamSheet({ movimentacao, onClose, onSuccess }: RegistroSicamSheetProps) {
   const [isPending, startTransition] = useTransition();
   const [protocolo, setProtocolo] = useState("");
-  const [dataRegistro, setDataRegistro] = useState(new Date().toISOString().split("T")[0]);
+  const [dataRegistro, setDataRegistro] = useState(toDateInputValueLocal());
   const [observacoes, setObservacoes] = useState("");
   const [erro, setErro] = useState("");
   const [sucesso, setSucesso] = useState(false);
@@ -86,7 +86,7 @@ export function RegistroSicamSheet({ movimentacao, onClose, onSuccess }: Registr
                   type="date"
                   value={dataRegistro}
                   onChange={(e) => setDataRegistro(e.target.value)}
-                  max={new Date().toISOString().split("T")[0]}
+                  max={toDateInputValueLocal()}
                 />
               </FormField>
 
