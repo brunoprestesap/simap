@@ -21,20 +21,13 @@ test.describe("Histórico de Movimentações", () => {
   });
 
   test("deve exibir tabela ou empty state", async ({ page }) => {
-    // Aguardar carregamento completo
-    await page.waitForLoadState("networkidle");
-
-    // Aguardar que o skeleton desapareça ou a tabela apareça
     await Promise.race([
-      page.locator("table").waitFor({ state: "visible", timeout: 5_000 }).catch(() => null),
-      page.getByText(/sem resultados|sem movimentações|não há/i).waitFor({ state: "visible", timeout: 5_000 }).catch(() => null),
+      page.locator("table").waitFor({ state: "visible", timeout: 10_000 }).catch(() => null),
+      page.getByText("Sem resultados").waitFor({ state: "visible", timeout: 10_000 }).catch(() => null),
     ]);
 
     const hasTable = await page.locator("table").isVisible().catch(() => false);
-    const hasEmpty = await page
-      .getByText(/sem resultados|sem movimentações|não há/i)
-      .isVisible()
-      .catch(() => false);
+    const hasEmpty = await page.getByText("Sem resultados").isVisible().catch(() => false);
     expect(hasTable || hasEmpty, "Esperava tabela ou empty state").toBe(true);
   });
 
@@ -42,35 +35,31 @@ test.describe("Histórico de Movimentações", () => {
     page,
   }) => {
     const filtroBtn = page.getByRole("button", { name: /filtros/i });
-    const filterPanel = page.locator(
-      "div.grid.grid-cols-1.gap-3.rounded-lg.border.border-border.bg-card.p-4",
-    );
+    // "Data início" label only exists inside the filter panel (not in table headers)
+    const filterPanelIndicator = page.locator("label").filter({ hasText: "Data início" });
 
-    // Painel deve estar oculto inicialmente
-    await expect(filterPanel).not.toBeVisible();
+    await expect(filterPanelIndicator).not.toBeVisible();
 
-    // Clicar abre o painel
     await filtroBtn.click();
-    await expect(filterPanel).toBeVisible({ timeout: 5_000 });
+    await expect(filterPanelIndicator).toBeVisible({ timeout: 5_000 });
 
-    // Clicar novamente fecha o painel
     await filtroBtn.click();
-    await expect(filterPanel).not.toBeVisible();
+    await expect(filterPanelIndicator).not.toBeVisible();
   });
 
   test("deve filtrar por status ao selecionar na dropdown", async ({
     page,
   }) => {
-    // Abrir filtros
     await page.getByRole("button", { name: /filtros/i }).click();
 
-    // Aguardar painel de filtros ficar visível
-    await page.locator("select").first().waitFor({ state: "visible", timeout: 5_000 });
+    // Navigate from <label>Status</label> → parent FilterField div → its <select>
+    const statusSelect = page
+      .locator("label", { hasText: "Status" })
+      .locator("..")
+      .locator("select");
+    await statusSelect.waitFor({ state: "visible", timeout: 5_000 });
+    await statusSelect.selectOption("PENDENTE_CONFIRMACAO");
 
-    // Selecionar status "Pendente" (PENDENTE_CONFIRMACAO)
-    await page.locator("select").first().selectOption("PENDENTE_CONFIRMACAO");
-
-    // Verificar que a URL foi atualizada com o filtro
     await expect(page).toHaveURL(/status=PENDENTE_CONFIRMACAO/, {
       timeout: 8_000,
     });
@@ -86,8 +75,10 @@ test.describe("Histórico de Movimentações", () => {
   test("deve exibir link 'Detalhe' para cada movimentação listada", async ({
     page,
   }) => {
-    // Aguardar que a página complete o carregamento
-    await page.waitForLoadState("networkidle");
+    await Promise.race([
+      page.locator("table").waitFor({ state: "visible", timeout: 10_000 }).catch(() => null),
+      page.getByText("Sem resultados").waitFor({ state: "visible", timeout: 10_000 }).catch(() => null),
+    ]);
 
     const rows = page.locator("table tbody tr");
     const count = await rows.count().catch(() => 0);
@@ -102,27 +93,22 @@ test.describe("Histórico de Movimentações", () => {
   test("deve exibir empty state quando nenhuma movimentação é encontrada", async ({
     page,
   }) => {
-    // Abrir filtros
     await page.getByRole("button", { name: /filtros/i }).click();
 
-    // Selecionar um status que provavelmente não terá resultados
-    // ou inserir datas que não retornem movimentações
-    const statusSelect = page.locator("select").first();
+    const statusSelect = page
+      .locator("label", { hasText: "Status" })
+      .locator("..")
+      .locator("select");
     await statusSelect.waitFor({ state: "visible", timeout: 5_000 });
-
-    // Tentar filtrar por um status específico
     await statusSelect.selectOption("REGISTRADA_SICAM");
 
-    // Aguardar a atualização da página
-    await page.waitForLoadState("networkidle");
+    await Promise.race([
+      page.locator("table").waitFor({ state: "visible", timeout: 10_000 }).catch(() => null),
+      page.getByText("Sem resultados").waitFor({ state: "visible", timeout: 10_000 }).catch(() => null),
+    ]);
 
-    // Se houver empty state, ele deve estar visível
-    // Caso contrário, a tabela estará visível
     const hasTable = await page.locator("table").isVisible().catch(() => false);
-    const hasEmpty = await page
-      .getByText(/sem resultados|sem movimentações/i)
-      .isVisible()
-      .catch(() => false);
+    const hasEmpty = await page.getByText("Sem resultados").isVisible().catch(() => false);
 
     expect(hasTable || hasEmpty).toBe(true);
   });
@@ -130,15 +116,15 @@ test.describe("Histórico de Movimentações", () => {
   test("deve exibir botão Limpar quando há filtros ativos", async ({
     page,
   }) => {
-    // Abrir filtros
     await page.getByRole("button", { name: /filtros/i }).click();
 
-    // Selecionar um status
-    const statusSelect = page.locator("select").first();
+    const statusSelect = page
+      .locator("label", { hasText: "Status" })
+      .locator("..")
+      .locator("select");
     await statusSelect.waitFor({ state: "visible", timeout: 5_000 });
     await statusSelect.selectOption("PENDENTE_CONFIRMACAO");
 
-    // Aguardar que o botão Limpar apareça
     await expect(page.getByRole("button", { name: /limpar/i })).toBeVisible({
       timeout: 8_000,
     });
