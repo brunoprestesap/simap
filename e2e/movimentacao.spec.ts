@@ -24,7 +24,7 @@ test.describe("Nova Movimentação", () => {
     await page.goto("/movimentacao/nova");
     const tomboDisponivel = await getTomboDisponivel();
 
-    expect(tomboDisponivel).toBeTruthy();
+    expect(tomboDisponivel, "Nenhum tombo disponível no banco").toBeTruthy();
 
     await page.getByRole("button", { name: "Manual" }).click();
 
@@ -50,7 +50,8 @@ test.describe("Nova Movimentação", () => {
     const [ntiUnit] = await queryDb<{ id: string }>(
       `SELECT id FROM "Unidade" WHERE codigo = 'NTI' LIMIT 1`,
     );
-    const unidadeDestino = await getUnidadeDestino(ntiUnit?.id);
+    expect(ntiUnit, "Unidade NTI não encontrada no banco").toBeTruthy();
+    const unidadeDestino = await getUnidadeDestino(ntiUnit.id);
     expect(unidadeDestino, "Nenhuma unidade destino disponível").toBeTruthy();
 
     await page.goto("/movimentacao/nova");
@@ -75,9 +76,12 @@ test.describe("Nova Movimentação", () => {
     await searchInput.click();
     await searchInput.fill(unidadeDestino!.codigo);
     // Aguardar dropdown e clicar no botão da unidade
-    const unitBtn = page
-      .getByRole("button", { name: new RegExp(unidadeDestino!.codigo) })
-      .first();
+    const dropdownContainer = page.locator("div").filter({
+      has: page.getByPlaceholder("Buscar unidade..."),
+    });
+    const unitBtn = dropdownContainer.getByRole("button", {
+      name: new RegExp(unidadeDestino!.codigo),
+    });
     await expect(unitBtn).toBeVisible({ timeout: 5_000 });
     await unitBtn.click();
 
@@ -85,7 +89,10 @@ test.describe("Nova Movimentação", () => {
     await expect(page.getByText("Setor de destino")).toBeVisible({
       timeout: 8_000,
     });
-    await page.locator("select").selectOption({ index: 1 });
+    // Aguardar select estar disponível e selecionar a segunda opção (índice 1)
+    const setorSelect = page.locator("select").first();
+    await expect(setorSelect).toBeVisible({ timeout: 5_000 });
+    await setorSelect.selectOption({ index: 1 });
 
     // Passo 4: confirmar e verificar tela de sucesso
     await page
