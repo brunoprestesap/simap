@@ -195,3 +195,34 @@ export async function buscarTomboParaMovimentacao(
     tombo: mapTomboSelecionado(tombo),
   };
 }
+
+export async function buscarTomboDetalhe(id: string) {
+  return prisma.tombo.findUnique({
+    where: { id },
+    include: {
+      unidade: { select: { id: true, codigo: true, descricao: true } },
+      setor: { select: { id: true, codigo: true, nome: true } },
+      usuarioResponsavel: { select: { id: true, nome: true, matricula: true } },
+      itensMovimentacao: {
+        orderBy: { createdAt: "desc" },
+        take: 10,
+        include: {
+          movimentacao: {
+            select: {
+              id: true,
+              status: true,
+              createdAt: true,
+              unidadeOrigem: { select: { codigo: true, descricao: true } },
+              unidadeDestino: { select: { codigo: true, descricao: true } },
+              tecnico: { select: { nome: true } },
+            },
+          },
+        },
+      },
+    },
+  });
+}
+
+export type TomboDetalhe = NonNullable<
+  Awaited<ReturnType<typeof buscarTomboDetalhe>>
+>;
