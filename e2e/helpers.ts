@@ -19,9 +19,9 @@ export async function queryDb<T>(
   sql: string,
   params?: unknown[],
 ): Promise<T[]> {
-  const client = new pg.Client({
-    connectionString: process.env.DATABASE_URL,
-  });
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) throw new Error("DATABASE_URL não definida");
+  const client = new pg.Client({ connectionString });
   await client.connect();
   try {
     const result = await client.query<T>(sql, params);
