@@ -89,10 +89,11 @@ test.describe("Nova Movimentação", () => {
     await expect(page.getByText("Setor de destino")).toBeVisible({
       timeout: 8_000,
     });
-    // Aguardar select estar disponível e selecionar a segunda opção (índice 1)
-    const setorSelect = page.locator("select").first();
-    await expect(setorSelect).toBeVisible({ timeout: 5_000 });
-    await setorSelect.selectOption({ index: 1 });
+    const setorContainer = page
+      .locator("div")
+      .filter({ has: page.getByText("Setor de destino") })
+      .first();
+    await setorContainer.locator("select").selectOption({ index: 1 });
 
     // Passo 4: confirmar e verificar tela de sucesso
     await page
