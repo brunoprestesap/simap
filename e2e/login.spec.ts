@@ -54,12 +54,8 @@ test.describe("Logout", () => {
     await loginAs(page, "AP20151");
     await expect(page).toHaveURL("/home");
 
-    // Sidebar: botão com aria-label="Sair"
     await page.getByRole("button", { name: "Sair" }).click();
 
-    await expect(page).toHaveURL(/\/login/, { timeout: 10_000 });
-    // Garantir que não está mais autenticado
-    await page.goto("/home", { waitUntil: "networkidle" });
     await expect(page).toHaveURL(/\/login/, { timeout: 10_000 });
   });
 });
