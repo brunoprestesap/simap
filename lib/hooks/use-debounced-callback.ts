@@ -6,10 +6,10 @@ import { useCallback, useEffect, useRef } from "react";
  * Hook que retorna uma versão debounced de um callback.
  * Limpa automaticamente o timer no unmount.
  */
-export function useDebouncedCallback<T extends (...args: unknown[]) => void>(
-  callback: T,
+export function useDebouncedCallback<Args extends unknown[]>(
+  callback: (...args: Args) => void,
   delayMs = 300,
-): T {
+): (...args: Args) => void {
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const callbackRef = useRef(callback);
 
@@ -24,10 +24,10 @@ export function useDebouncedCallback<T extends (...args: unknown[]) => void>(
   }, []);
 
   return useCallback(
-    (...args: Parameters<T>) => {
+    (...args: Args) => {
       if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = setTimeout(() => callbackRef.current(...args), delayMs);
     },
     [delayMs],
-  ) as T;
+  );
 }

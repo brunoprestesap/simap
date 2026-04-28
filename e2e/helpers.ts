@@ -1,6 +1,7 @@
 // e2e/helpers.ts
 import "dotenv/config";
 import type { Page } from "@playwright/test";
+import type { QueryResultRow } from "pg";
 import pg from "pg";
 
 export async function loginAs(
@@ -15,7 +16,7 @@ export async function loginAs(
   await page.waitForURL("/home", { timeout: 15_000 });
 }
 
-export async function queryDb<T>(
+export async function queryDb<T extends QueryResultRow>(
   sql: string,
   params?: unknown[],
 ): Promise<T[]> {

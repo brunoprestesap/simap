@@ -120,7 +120,7 @@ export function Scanner({ onScan, onError, active = true }: ScannerProps) {
       if (cancelled) return;
 
       const html5QrCode = new Html5Qrcode(containerId, {
-        formatsToSupport: BARCODE_FORMATS,
+        formatsToSupport: [...BARCODE_FORMATS],
         verbose: false,
       });
       scannerRef.current = html5QrCode;
