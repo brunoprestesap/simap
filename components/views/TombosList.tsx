@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import Link from "next/link";
 import { EmptyState } from "@/components/common/EmptyState";
 import { ListSkeleton } from "@/components/common/ListSkeleton";
 import { Pagination } from "@/components/common/Pagination";
@@ -230,37 +231,37 @@ export function TombosList() {
           {/* Mobile: cards */}
           <div className="space-y-3 md:hidden">
             {tombos.map((tombo) => (
-              <div
+              <Link
                 key={tombo.id}
-                className="rounded-lg border border-border bg-card p-4 shadow-sm"
+                href={`/tombos/${tombo.id}`}
+                className="block rounded-xl border border-border bg-card p-4 shadow-sm transition-all hover:shadow-md active:scale-[0.99]"
               >
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-sm font-semibold font-mono text-foreground">
-                    {tombo.numero}
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-mono text-sm font-bold text-primary">
+                    # {tombo.numero}
                   </span>
                   <TomboStatusBadge tombo={tombo} />
                 </div>
-                <p className="mt-1 text-sm text-foreground line-clamp-2">
+                <p className="mt-1.5 line-clamp-2 text-sm text-foreground">
                   {tombo.descricaoMaterial}
                 </p>
-                <div className="mt-2 space-y-0.5">
-                  {tombo.unidade && (
-                    <p className="text-xs text-muted-foreground">
-                      {tombo.unidade.descricao}
-                    </p>
-                  )}
-                  {tombo.setor && (
-                    <p className="text-xs text-muted-foreground">
-                      Setor: {tombo.setor.nome}
-                    </p>
-                  )}
-                  {nomeResponsavelExibicao(tombo) && (
-                    <p className="text-xs text-muted-foreground">
-                      Resp: {nomeResponsavelExibicao(tombo)}
-                    </p>
-                  )}
+                {(tombo.unidade ||
+                  tombo.setor ||
+                  nomeResponsavelExibicao(tombo)) && (
+                  <div className="mt-2 flex flex-wrap gap-x-3 gap-y-0.5 border-t border-border pt-2 text-xs text-muted-foreground">
+                    {tombo.unidade && <span>{tombo.unidade.descricao}</span>}
+                    {tombo.setor && <span>{tombo.setor.nome}</span>}
+                    {nomeResponsavelExibicao(tombo) && (
+                      <span>{nomeResponsavelExibicao(tombo)}</span>
+                    )}
+                  </div>
+                )}
+                <div className="mt-1.5 flex justify-end">
+                  <span className="text-xs font-semibold text-primary">
+                    Ver detalhes ›
+                  </span>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
 
