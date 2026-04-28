@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { EmptyState } from "@/components/common/EmptyState";
 import { ListSkeleton } from "@/components/common/ListSkeleton";
 import { Pagination } from "@/components/common/Pagination";
@@ -73,6 +74,7 @@ export function TombosList() {
 
   const { widths, onPointerDown, onPointerMove, onPointerUp } =
     useColumnResize(COLUMNS);
+  const router = useRouter();
 
   const handleBuscaChange = useDebouncedCallback((valor: string) => {
     updateParams({ busca: valor });
@@ -305,7 +307,8 @@ export function TombosList() {
                 {tombos.map((tombo) => (
                   <tr
                     key={tombo.id}
-                    className="border-b border-border last:border-0 hover:bg-muted/50"
+                    onClick={() => router.push(`/tombos/${tombo.id}`)}
+                    className="cursor-pointer border-b border-border last:border-0 hover:bg-muted/50"
                   >
                     <td className="truncate py-3 pr-4 font-mono font-medium">
                       {tombo.numero}
