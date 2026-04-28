@@ -11,6 +11,8 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
+    "deploy:prepare:vps": "bash deploy/prepare-vps.sh",
+    "deploy:bootstrap:first": "bash scripts/bootstrap-first-deploy.sh",
     "postinstall": "prisma generate"
   },
   "prisma": {

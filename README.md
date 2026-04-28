@@ -95,6 +95,24 @@ npx prisma migrate dev
 npx prisma db seed
 ```
 
+## Deploy CI/CD para VPS
+
+O projeto possui pipeline de CI/CD com GitHub Actions para build/push de imagem no GHCR e deploy remoto via SSH em VPS com Docker.
+
+- Workflow: `.github/workflows/ci-cd.yml`
+- Stack de produção: `deploy/docker-compose.prod.yml`
+- Script de deploy remoto: `deploy/deploy.sh`
+- Runbook completo: `docs/deploy.md`
+
+Para produção, configure os secrets do repositório e dispare o workflow em `main` (ou manualmente por `workflow_dispatch`).
+O deploy de produção publica a aplicação atrás de proxy HTTPS (necessário para o scanner de câmera em navegadores móveis).
+
+Para automatizar o primeiro deploy (setup de secrets + preparo da VPS + disparo do workflow), use:
+
+```bash
+npm run deploy:bootstrap:first -- --help
+```
+
 ## Scripts de desenvolvimento
 
 - `npm run dev`: inicia Next.js em modo dev (Turbopack)
