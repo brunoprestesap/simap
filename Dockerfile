@@ -5,13 +5,13 @@ FROM base AS deps
 RUN apk add --no-cache libc6-compat openssl
 COPY package.json package-lock.json ./
 COPY prisma ./prisma
-RUN npm ci
+RUN npm ci --ignore-scripts
 
 FROM base AS builder
 RUN apk add --no-cache libc6-compat openssl
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/lib/generated ./lib/generated
 COPY . .
+RUN npx prisma generate
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
