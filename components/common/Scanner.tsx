@@ -2,6 +2,13 @@
 
 import { useEffect, useRef, useState, useCallback, useId } from "react";
 import { Camera, CameraOff, Loader2, Zap, ZapOff } from "lucide-react";
+import { BARCODE_FORMATS } from "@/lib/scanner/constants";
+import { processBarcodeReadAttempt } from "@/lib/scanner/barcode-acceptance";
+import {
+  friendlyError,
+  isDesktop,
+  safeStopScanner,
+} from "@/lib/scanner/camera-helpers";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -15,77 +22,6 @@ interface ScannerProps {
 
 interface ScannerInstance {
   stop: () => Promise<void>;
-}
-
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-/**
- * Html5QrcodeSupportedFormats numeric values (avoids top-level import of
- * html5-qrcode which accesses `document` and breaks SSR).
- */
-const BARCODE_FORMATS = [
-  5,  // CODE_128
-  3,  // CODE_39
-  4,  // CODE_93
-  8,  // ITF
-  2,  // CODABAR
-  9,  // EAN_13
-  10, // EAN_8
-];
-
-/** Minimum consecutive reads of the same code to accept as valid */
-const CONFIRM_THRESHOLD = 2;
-/** Time window for consecutive reads (ms) */
-const CONFIRM_WINDOW_MS = 2000;
-/** Debounce between accepted scans of the same code (ms) */
-const SCAN_COOLDOWN_MS = 2500;
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function isDesktop(): boolean {
-  if (typeof window === "undefined") return false;
-  return (
-    !window.matchMedia("(pointer: coarse)").matches &&
-    window.matchMedia("(min-width: 1024px)").matches
-  );
-}
-
-/** html5-qrcode throws or rejects if stop() runs before start() finished */
-async function safeStopScanner(instance: { stop: () => Promise<void> } | null) {
-  if (!instance) return;
-  try {
-    await instance.stop();
-  } catch {
-    /* scanner not running yet, already stopped, or unmount race */
-  }
-}
-
-function friendlyError(err: unknown): string {
-  if (err instanceof DOMException) {
-    switch (err.name) {
-      case "NotAllowedError":
-        return "Permissão de câmera negada. Acesse Ajustes > Safari > Câmera e permita o acesso.";
-      case "NotFoundError":
-        return "Nenhuma câmera encontrada neste dispositivo.";
-      case "NotReadableError":
-        return "A câmera está sendo usada por outro aplicativo.";
-      case "OverconstrainedError":
-        return "A câmera não suporta a resolução solicitada.";
-    }
-  }
-  if (err instanceof Error && err.message) {
-    if (err.message.includes("Permission")) {
-      return "Permissão de câmera negada. Acesse Ajustes > Safari > Câmera e permita o acesso.";
-    }
-    if (err.message.includes("not found") || err.message.includes("No camera")) {
-      return "Nenhuma câmera encontrada neste dispositivo.";
-    }
-  }
-  return "Não foi possível acessar a câmera.";
 }
 
 // ---------------------------------------------------------------------------
@@ -131,31 +67,17 @@ export function Scanner({ onScan, onError, active = true }: ScannerProps) {
   // --------------------------------------------------
   const tryAccept = useCallback((code: string) => {
     const now = Date.now();
-
-    // Cooldown: don't re-accept the same code too quickly
-    if (
-      code === lastAcceptedRef.current.code &&
-      now - lastAcceptedRef.current.at < SCAN_COOLDOWN_MS
-    ) {
-      return;
-    }
-
-    const buf = confirmBuf.current;
-    if (code === buf.code && now - buf.firstAt < CONFIRM_WINDOW_MS) {
-      buf.count++;
-    } else {
-      // Reset buffer for new code
-      confirmBuf.current = { code, count: 1, firstAt: now };
-      return;
-    }
-
-    if (buf.count >= CONFIRM_THRESHOLD) {
-      // Accepted!
-      lastAcceptedRef.current = { code, at: now };
-      confirmBuf.current = { code: "", count: 0, firstAt: 0 };
-
+    const { buf, lastAccepted, acceptedCode } = processBarcodeReadAttempt(
+      code,
+      now,
+      confirmBuf.current,
+      lastAcceptedRef.current,
+    );
+    confirmBuf.current = buf;
+    lastAcceptedRef.current = lastAccepted;
+    if (acceptedCode !== null) {
       if (navigator.vibrate) navigator.vibrate(100);
-      onScanRef.current(code);
+      onScanRef.current(acceptedCode);
     }
   }, []);
 
@@ -222,6 +144,7 @@ export function Scanner({ onScan, onError, active = true }: ScannerProps) {
       try {
         await html5QrCode.start(cameraConfig, scanConfig, onSuccess, undefined);
       } catch {
+        if (cancelled) return;
         // Retry with relaxed constraints (some devices reject specific facingMode)
         try {
           await html5QrCode.start(
