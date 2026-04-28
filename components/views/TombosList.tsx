@@ -113,50 +113,50 @@ export function TombosList() {
   return (
     <div className="space-y-4">
       {/* Toolbar */}
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowFilters(!showFilters)}
-          >
-            <Filter className="h-4 w-4" data-icon="inline-start" />
-            Filtros
-            {hasFilters && (
-              <span className="ml-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white px-1">
-                !
-              </span>
-            )}
-          </Button>
-          {(hasFilters || busca || status !== "todos") && (
-            <Button variant="ghost" size="sm" onClick={clearAll}>
-              <X className="h-4 w-4" data-icon="inline-start" />
-              Limpar
-            </Button>
-          )}
-        </div>
-        <div className="relative">
+      <div className="flex items-center gap-2">
+        <div className="relative min-w-0 flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
             placeholder="Buscar por nº ou descrição..."
             defaultValue={busca}
             onChange={(e) => handleBuscaChange(e.target.value)}
-            className="h-9 w-48 rounded-md border border-border bg-background pl-9 pr-3 text-sm placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary outline-none sm:w-64"
+            className="h-9 w-full rounded-md border border-border bg-background pl-9 pr-3 text-sm placeholder:text-muted-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary"
           />
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowFilters(!showFilters)}
+          className="shrink-0"
+        >
+          <Filter className="h-4 w-4" data-icon="inline-start" />
+          Filtros
+          {hasFilters && (
+            <span className="ml-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-white">
+              {[unidadeId, setorId].filter(Boolean).length}
+            </span>
+          )}
+        </Button>
+        {(hasFilters || busca || status !== "todos") && (
+          <Button variant="ghost" size="sm" onClick={clearAll} className="shrink-0">
+            <X className="h-4 w-4" data-icon="inline-start" />
+            Limpar
+          </Button>
+        )}
       </div>
 
       {/* Status chips */}
-      <div className="flex gap-2 flex-wrap">
+      <div className="flex gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {STATUS_OPTIONS.map((opt) => (
           <button
             key={opt.value}
             onClick={() =>
               updateParams({ status: opt.value === "todos" ? "" : opt.value })
             }
-            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-              status === opt.value || (opt.value === "todos" && status === "todos")
+            className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+              status === opt.value ||
+              (opt.value === "todos" && status === "todos")
                 ? "bg-primary text-white"
                 : "bg-muted text-muted-foreground hover:bg-accent"
             }`}
@@ -201,7 +201,7 @@ export function TombosList() {
               disabled={!unidadeId}
               className="h-8 w-full rounded-md border border-border bg-background px-2 text-sm disabled:opacity-50"
             >
-              <option value="">Todos</option>
+              <option value="">{unidadeId ? "Todos" : "Selecione uma unidade"}</option>
               {setoresExibidos.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.nome}
