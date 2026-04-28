@@ -234,6 +234,7 @@ export function TombosList() {
               <Link
                 key={tombo.id}
                 href={`/tombos/${tombo.id}`}
+                aria-label={`Ver detalhes do tombo ${tombo.numero}`}
                 className="block rounded-xl border border-border bg-card p-4 shadow-sm transition-all hover:shadow-md active:scale-[0.99]"
               >
                 <div className="flex items-center justify-between gap-2">
