@@ -7,6 +7,7 @@ import type { TomboDetalhe } from "@/server/queries/tombo";
 import { nomeResponsavelExibicao } from "@/lib/tombo-responsavel";
 import { formatDateBR } from "@/lib/format";
 import { MOVIMENTACAO_STATUS_EM_ANDAMENTO } from "@/lib/movimentacao-status";
+import type { ReactNode } from "react";
 
 const STATUS_LABEL: Record<string, string> = {
   PENDENTE_CONFIRMACAO: "Movimentação registrada",
@@ -27,7 +28,7 @@ function InfoSection({
   children,
 }: {
   titulo: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-card">
@@ -166,7 +167,8 @@ export default async function TomboDetalhePage({ params }: Props) {
               label="Matrícula"
               value={
                 tombo.usuarioResponsavel?.matricula ??
-                tombo.matriculaResponsavel!
+                tombo.matriculaResponsavel ??
+                ""
               }
             />
           )}
