@@ -10,6 +10,7 @@ RUN npm ci
 FROM base AS builder
 RUN apk add --no-cache libc6-compat openssl
 COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/lib/generated ./lib/generated
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
