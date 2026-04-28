@@ -86,38 +86,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Load deploy config from .env.production
-        shell: bash
-        run: |
-          set -Eeuo pipefail
-          if [ ! -f .env.production ]; then
-            echo ".env.production não encontrado no repositório."
-            exit 1
-          fi
-
-          set -a
-          source .env.production
-          set +a
-
-          : "${VPS_HOST:?VPS_HOST não definido em .env.production}"
-          : "${VPS_PORT:?VPS_PORT não definido em .env.production}"
-          : "${VPS_USER:?VPS_USER não definido em .env.production}"
-          : "${VPS_PATH:?VPS_PATH não definido em .env.production}"
-
-          echo "VPS_HOST=${VPS_HOST}" >> "$GITHUB_ENV"
-          echo "VPS_PORT=${VPS_PORT}" >> "$GITHUB_ENV"
-          echo "VPS_USER=${VPS_USER}" >> "$GITHUB_ENV"
-          echo "VPS_PATH=${VPS_PATH}" >> "$GITHUB_ENV"
-
       - name: Copy deploy files to VPS
         uses: appleboy/scp-action@v0.1.7
         with:
-          host: ${{ env.VPS_HOST }}
-          username: ${{ env.VPS_USER }}
+          host: ${{ vars.VPS_HOST }}
+          username: ${{ vars.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          port: ${{ env.VPS_PORT }}
+          port: ${{ vars.VPS_PORT }}
           source: "deploy/*"
-          target: ${{ env.VPS_PATH }}
+          target: ${{ vars.VPS_PATH }}
           strip_components: 0
 
       - name: Run remote deploy script
@@ -131,15 +108,15 @@ jobs:
           TLS_CERT_PEM: ${{ secrets.TLS_CERT_PEM }}
           TLS_KEY_PEM: ${{ secrets.TLS_KEY_PEM }}
         with:
-          host: ${{ env.VPS_HOST }}
-          username: ${{ env.VPS_USER }}
+          host: ${{ vars.VPS_HOST }}
+          username: ${{ vars.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          port: ${{ env.VPS_PORT }}
+          port: ${{ vars.VPS_PORT }}
           envs: IMAGE_TAG,GHCR_IMAGE,GHCR_USER,GHCR_TOKEN,APP_ENV_FILE,TLS_CERT_PEM,TLS_KEY_PEM
           script: |
             set -Eeuo pipefail
-            mkdir -p "${{ env.VPS_PATH }}"
-            cd "${{ env.VPS_PATH }}"
+            mkdir -p "${{ vars.VPS_PATH }}"
+            cd "${{ vars.VPS_PATH }}"
             printf "%s\n" "${APP_ENV_FILE}" > .env
             chmod 600 .env
             mkdir -p deploy/certs
