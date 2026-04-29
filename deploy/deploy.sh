@@ -52,7 +52,8 @@ echo "Subindo banco de dados..."
 docker compose -f "${COMPOSE_FILE}" up -d "${DB_SERVICE}"
 
 echo "Aplicando migracoes Prisma..."
-docker compose -f "${COMPOSE_FILE}" run --rm "${APP_SERVICE}" sh -c "npx --yes prisma@7.6.0 migrate deploy"
+docker compose -f "${COMPOSE_FILE}" run --rm --entrypoint "" "${APP_SERVICE}" \
+  node /app/node_modules/prisma/build/index.js migrate deploy
 
 echo "Subindo aplicacao..."
 docker compose -f "${COMPOSE_FILE}" up -d "${APP_SERVICE}"

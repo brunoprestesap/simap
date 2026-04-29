@@ -29,6 +29,9 @@
 .DS_Store
 *.pem
 /certs/
+/deploy/certs/
+/deploy/backups/
+/deploy/nginx.conf
 
 # debug
 npm-debug.log*
