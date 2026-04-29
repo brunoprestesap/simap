@@ -68,13 +68,13 @@ docker compose -f "${COMPOSE_FILE}" up -d "${BACKUP_SERVICE}"
 echo "Validando status dos containers..."
 docker compose -f "${COMPOSE_FILE}" ps
 
-if ! docker compose -f "${COMPOSE_FILE}" ps "${APP_SERVICE}" --format json | rg -q "\"State\":\"running\""; then
+if ! docker compose -f "${COMPOSE_FILE}" ps "${APP_SERVICE}" --format json | grep -q "\"State\":\"running\""; then
   echo "Falha: servico ${APP_SERVICE} nao entrou em estado running." >&2
   echo "Rollback manual sugerido: export IMAGE_TAG=<tag_anterior> && bash deploy/deploy.sh" >&2
   exit 1
 fi
 
-if ! docker compose -f "${COMPOSE_FILE}" ps "${PROXY_SERVICE}" --format json | rg -q "\"State\":\"running\""; then
+if ! docker compose -f "${COMPOSE_FILE}" ps "${PROXY_SERVICE}" --format json | grep -q "\"State\":\"running\""; then
   echo "Falha: servico ${PROXY_SERVICE} nao entrou em estado running." >&2
   echo "Verifique certificado/chave em deploy/certs e dominio APP_DOMAIN." >&2
   exit 1
