@@ -55,7 +55,11 @@ export function LoginForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    // method="post" é defesa em profundidade: se a hidratação do React falhar
+    // (ex.: CSP bloqueando script inline, JS desligado), o submit nativo do
+    // browser usa POST em vez de GET — assim matrícula/senha vão no body em
+    // vez de virarem query string na URL e vazarem em logs/Referer/histórico.
+    <form onSubmit={handleSubmit} method="post" className="space-y-6">
       {error && (
         <div className="flex items-center gap-3 rounded-lg bg-destructive/10 p-4 text-sm text-destructive border border-destructive/20">
           <AlertCircle className="h-5 w-5 shrink-0" />

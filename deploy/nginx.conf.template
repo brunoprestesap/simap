@@ -1,4 +1,8 @@
-limit_req_zone $binary_remote_addr zone=login_zone:10m rate=5r/m;
+## Rate limit do nginx é primeira linha — a app já faz rate limit por matrícula
+## (lib/rate-limit.ts: 5 tentativas/min, lockout 10min). Aqui mantemos folga
+## para o fluxo normal de NextAuth não estourar (providers + csrf + callback +
+## session geram várias requests em sequência num único login).
+limit_req_zone $binary_remote_addr zone=login_zone:10m rate=30r/m;
 
 server {
   listen 80;
@@ -59,7 +63,7 @@ server {
   }
 
   location = /login {
-    limit_req zone=login_zone burst=10 nodelay;
+    limit_req zone=login_zone burst=20 nodelay;
     proxy_pass http://app:3000;
     proxy_http_version 1.1;
     proxy_set_header Host $host;
@@ -71,7 +75,7 @@ server {
   }
 
   location /api/auth/ {
-    limit_req zone=login_zone burst=10 nodelay;
+    limit_req zone=login_zone burst=20 nodelay;
     proxy_pass http://app:3000;
     proxy_http_version 1.1;
     proxy_set_header Host $host;
