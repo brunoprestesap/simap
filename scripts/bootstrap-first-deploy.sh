@@ -9,21 +9,24 @@ Uso:
     --vps-user <user> \
     --vps-path <path> \
     --ssh-key <arquivo_chave_privada> \
-    --ghcr-user <usuario_ghcr> \
-    --ghcr-token <token_ghcr> \
     --env-file <arquivo_env_producao> \
     --tls-cert-file <arquivo_certificado_pem> \
     --tls-key-file <arquivo_chave_pem> \
     [--vps-port <porta_ssh>] \
+    [--ssh-passphrase <passphrase>] \
     [--repo <owner/repo>] \
     [--run-workflow]
 
 Descricao:
   Automatiza o setup para o primeiro deploy:
   1) valida requisitos locais
-  2) grava GitHub Secrets do repositorio
+  2) grava GitHub Variables (dados nao-sigilosos) e Secrets (sigilosos)
   3) prepara diretorio base da VPS
   4) opcionalmente dispara workflow CI/CD
+
+Mapeamento GitHub:
+  - Variables: VPS_HOST, VPS_PORT, VPS_USER, VPS_PATH
+  - Secrets:   VPS_SSH_KEY, VPS_SSH_PASSPHRASE, APP_ENV_FILE, TLS_CERT_PEM, TLS_KEY_PEM
 EOF
 }
 
@@ -38,6 +41,7 @@ need_cmd() {
 VPS_PORT="22"
 RUN_WORKFLOW="false"
 REPO=""
+SSH_PASSPHRASE=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -45,8 +49,7 @@ while [[ $# -gt 0 ]]; do
     --vps-user) VPS_USER="$2"; shift 2 ;;
     --vps-path) VPS_PATH="$2"; shift 2 ;;
     --ssh-key) SSH_KEY_PATH="$2"; shift 2 ;;
-    --ghcr-user) GHCR_USER="$2"; shift 2 ;;
-    --ghcr-token) GHCR_TOKEN="$2"; shift 2 ;;
+    --ssh-passphrase) SSH_PASSPHRASE="$2"; shift 2 ;;
     --env-file) ENV_FILE="$2"; shift 2 ;;
     --tls-cert-file) TLS_CERT_FILE="$2"; shift 2 ;;
     --tls-key-file) TLS_KEY_FILE="$2"; shift 2 ;;
@@ -62,8 +65,6 @@ done
 : "${VPS_USER:?Informe --vps-user}"
 : "${VPS_PATH:?Informe --vps-path}"
 : "${SSH_KEY_PATH:?Informe --ssh-key}"
-: "${GHCR_USER:?Informe --ghcr-user}"
-: "${GHCR_TOKEN:?Informe --ghcr-token}"
 : "${ENV_FILE:?Informe --env-file}"
 : "${TLS_CERT_FILE:?Informe --tls-cert-file}"
 : "${TLS_KEY_FILE:?Informe --tls-key-file}"
@@ -99,14 +100,15 @@ if [[ -z "${REPO}" ]]; then
   REPO="$(gh repo view --json nameWithOwner -q .nameWithOwner)"
 fi
 
-echo "Configurando secrets no repositorio ${REPO}..."
-gh secret set VPS_HOST --repo "${REPO}" --body "${VPS_HOST}"
-gh secret set VPS_PORT --repo "${REPO}" --body "${VPS_PORT}"
-gh secret set VPS_USER --repo "${REPO}" --body "${VPS_USER}"
-gh secret set VPS_PATH --repo "${REPO}" --body "${VPS_PATH}"
+echo "Configurando GitHub Variables (nao-sigilosos) em ${REPO}..."
+gh variable set VPS_HOST --repo "${REPO}" --body "${VPS_HOST}"
+gh variable set VPS_PORT --repo "${REPO}" --body "${VPS_PORT}"
+gh variable set VPS_USER --repo "${REPO}" --body "${VPS_USER}"
+gh variable set VPS_PATH --repo "${REPO}" --body "${VPS_PATH}"
+
+echo "Configurando GitHub Secrets em ${REPO}..."
 gh secret set VPS_SSH_KEY --repo "${REPO}" < "${SSH_KEY_PATH}"
-gh secret set GHCR_USER --repo "${REPO}" --body "${GHCR_USER}"
-gh secret set GHCR_TOKEN --repo "${REPO}" --body "${GHCR_TOKEN}"
+gh secret set VPS_SSH_PASSPHRASE --repo "${REPO}" --body "${SSH_PASSPHRASE}"
 gh secret set APP_ENV_FILE --repo "${REPO}" < "${ENV_FILE}"
 gh secret set TLS_CERT_PEM --repo "${REPO}" < "${TLS_CERT_FILE}"
 gh secret set TLS_KEY_PEM --repo "${REPO}" < "${TLS_KEY_FILE}"

@@ -28,24 +28,26 @@ Este projeto usa GitHub Actions para build/publicação da imagem Docker no GHCR
 - `.env` (na VPS): variáveis de runtime da aplicação e banco.
 - `deploy/certs/server.crt` e `deploy/certs/server.key`: certificados usados pelo proxy.
 
-## GitHub Secrets necessários
+## GitHub Variables e Secrets
 
-### Acesso SSH
+### Variables (Repository Variables — não sigilosos)
 
 - `VPS_HOST`: IP/FQDN da VPS.
 - `VPS_PORT`: porta SSH (geralmente `22`).
 - `VPS_USER`: usuário de deploy.
-- `VPS_SSH_KEY`: chave privada SSH (formato PEM/OpenSSH).
 - `VPS_PATH`: caminho remoto onde os arquivos de deploy ficarão.
 
-### Registry (GHCR)
+### Secrets (Repository Secrets — sigilosos)
 
-- `GHCR_USER`: usuário/serviço com acesso de leitura ao pacote.
-- `GHCR_TOKEN`: token com escopo de leitura de packages (`read:packages`).
-
-### Runtime da aplicação
-
+- `VPS_SSH_KEY`: chave privada SSH (formato PEM/OpenSSH).
+- `VPS_SSH_PASSPHRASE`: passphrase da chave SSH (string vazia se a chave não tiver).
 - `APP_ENV_FILE`: conteúdo completo do `.env` de produção em formato multilinha.
+- `TLS_CERT_PEM`: certificado TLS (PEM) emitido pela CA interna para `APP_DOMAIN`.
+- `TLS_KEY_PEM`: chave privada do certificado TLS (PEM).
+
+### GHCR (não precisa de secret manual)
+
+O workflow autentica no GitHub Container Registry usando `${{ github.actor }}` e `${{ github.token }}` automaticamente — não há necessidade de gravar `GHCR_USER`/`GHCR_TOKEN` como secret.
 
 ## Exemplo de `.env` para produção
 
@@ -59,8 +61,12 @@ DATABASE_URL="postgresql://simap:trocar-por-segredo-forte@db:5432/simap?schema=p
 APP_PORT="3000"
 APP_URL="https://simap.intra.jfap"
 NEXTAUTH_URL="https://simap.intra.jfap"
+NEXTAUTH_URL_INTERNAL="http://app:3000"
+AUTH_TRUST_HOST="true"
 NEXTAUTH_SECRET="valor-seguro"
 APP_DOMAIN="simap.intra.jfap"
+BACKUP_RETENTION_DAYS="14"
+BACKUP_INTERVAL_SECONDS="86400"
 ```
 
 ## Observação importante sobre câmera
@@ -91,8 +97,7 @@ npm run deploy:bootstrap:first -- \
   --vps-user "usuario-ssh" \
   --vps-path "/opt/simap" \
   --ssh-key "$HOME/.ssh/id_rsa" \
-  --ghcr-user "seu-usuario-ghcr" \
-  --ghcr-token "seu-token-ghcr" \
+  --ssh-passphrase "passphrase-da-chave-ou-vazio" \
   --env-file ".env.production" \
   --tls-cert-file "/caminho/simap.intra.jfap.crt" \
   --tls-key-file "/caminho/simap.intra.jfap.key" \
@@ -102,7 +107,8 @@ npm run deploy:bootstrap:first -- \
 O script:
 
 - valida `gh`, `ssh` e autenticacao no GitHub CLI;
-- grava todos os secrets (`VPS_*`, `GHCR_*`, `APP_ENV_FILE`, `TLS_CERT_PEM`, `TLS_KEY_PEM`);
+- grava `VPS_HOST`, `VPS_PORT`, `VPS_USER`, `VPS_PATH` como **GitHub Variables**;
+- grava `VPS_SSH_KEY`, `VPS_SSH_PASSPHRASE`, `APP_ENV_FILE`, `TLS_CERT_PEM`, `TLS_KEY_PEM` como **GitHub Secrets**;
 - sobe e executa `deploy/prepare-vps.sh` na VPS;
 - dispara o workflow `CI/CD VPS` (quando `--run-workflow` for informado).
 

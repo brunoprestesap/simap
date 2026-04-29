@@ -1,31 +1,44 @@
+# VCS / CI
 .git
 .github
+
+# Build artifacts
 .next
+out
+build
+
+# Dependencies
 node_modules
+
+# Test outputs
 coverage
 playwright-report
 test-results
+
+# Logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
-.DS_Store
-.env
-.env.local
-.vercel
-*.pem
-certs
-.worktrees
-node_modules
-.next
-.git
-certs
-*.pem
+
+# Local env / secrets (mas mantém .env.example caso seja referenciado)
 .env*
-!.env
+!.env.example
+*.pem
+certs
+deploy/certs
+deploy/backups
+deploy/nginx.conf
+
+# IDE / OS
+.DS_Store
 .vercel
-coverage
+.worktrees
+.claude
+.cursor
+.interface-design
+
+# Sources não necessárias na imagem
 e2e
 __tests__
 docs
-.claude
