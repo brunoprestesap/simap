@@ -129,52 +129,36 @@ export async function listarSetoresPorUnidade(unidadeId: string) {
   });
 }
 
+const tomboMovimentacaoInclude = {
+  unidade: { select: { id: true, codigo: true, descricao: true } },
+  setor: { select: { id: true, codigo: true, nome: true } },
+  usuarioResponsavel: usuarioResponsavelSelect,
+  itensMovimentacao: {
+    where: {
+      movimentacao: {
+        status: { in: [...MOVIMENTACAO_STATUS_EM_ANDAMENTO] },
+      },
+    },
+    select: { id: true },
+    take: 1,
+  },
+};
+
 export async function buscarTomboParaMovimentacao(
   numero: string,
 ): Promise<BuscarTomboMovimentacaoResult> {
-  const tomboByNumero = await prisma.tombo.findUnique({
-    where: { numero },
-    include: {
-      unidade: { select: { id: true, codigo: true, descricao: true } },
-      setor: { select: { id: true, codigo: true, nome: true } },
-      usuarioResponsavel: usuarioResponsavelSelect,
-      itensMovimentacao: {
-        where: {
-          movimentacao: {
-            status: { in: [...MOVIMENTACAO_STATUS_EM_ANDAMENTO] },
-          },
-        },
-        select: { id: true },
-        take: 1,
-      },
-    },
-  });
-
   const numeroSemZeros = numero.replace(/^0+/, "");
-  const fallbackNumero =
-    numeroSemZeros.length > 0 && numeroSemZeros !== numero ? numeroSemZeros : null;
+  const candidatos =
+    numeroSemZeros.length > 0 && numeroSemZeros !== numero
+      ? [numero, numeroSemZeros]
+      : [numero];
 
-  const tombo =
-    tomboByNumero ??
-    (fallbackNumero
-      ? await prisma.tombo.findUnique({
-          where: { numero: fallbackNumero },
-          include: {
-            unidade: { select: { id: true, codigo: true, descricao: true } },
-            setor: { select: { id: true, codigo: true, nome: true } },
-            usuarioResponsavel: usuarioResponsavelSelect,
-            itensMovimentacao: {
-              where: {
-                movimentacao: {
-                  status: { in: [...MOVIMENTACAO_STATUS_EM_ANDAMENTO] },
-                },
-              },
-              select: { id: true },
-              take: 1,
-            },
-          },
-        })
-      : null);
+  // Uma única query cobre o lookup direto e o fallback sem zeros à esquerda
+  // (entrada típica do leitor de código de barras vs. cadastro com padding).
+  const tombo = await prisma.tombo.findFirst({
+    where: { numero: { in: candidatos } },
+    include: tomboMovimentacaoInclude,
+  });
 
   if (!tombo) {
     return {

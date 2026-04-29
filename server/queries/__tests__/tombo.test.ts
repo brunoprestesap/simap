@@ -9,6 +9,7 @@ vi.mock("@/lib/prisma", () => ({
       findMany: vi.fn(),
       count: vi.fn(),
       findUnique: vi.fn(),
+      findFirst: vi.fn(),
     },
   },
 }));
@@ -123,28 +124,28 @@ describe("buscarTomboParaMovimentacao", () => {
   });
 
   it("retorna nao_encontrado quando o tombo não existe", async () => {
-    vi.mocked(prisma.tombo.findUnique).mockResolvedValue(null);
+    vi.mocked(prisma.tombo.findFirst).mockResolvedValue(null);
 
     const r = await buscarTomboParaMovimentacao("999999");
     expect(r).toEqual({ status: "nao_encontrado", codigo: "999999" });
-    expect(prisma.tombo.findUnique).toHaveBeenCalledTimes(1);
+    expect(prisma.tombo.findFirst).toHaveBeenCalledTimes(1);
   });
 
   it("retorna em_movimentacao quando há item em movimentação ativa", async () => {
-    vi.mocked(prisma.tombo.findUnique).mockResolvedValue({
+    vi.mocked(prisma.tombo.findFirst).mockResolvedValue({
       ...mockTomboBase,
       itensMovimentacao: [{ id: "im1" }],
-    } as Awaited<ReturnType<typeof prisma.tombo.findUnique>>);
+    } as Awaited<ReturnType<typeof prisma.tombo.findFirst>>);
 
     const r = await buscarTomboParaMovimentacao("100");
     expect(r).toEqual({ status: "em_movimentacao", codigo: "100" });
   });
 
   it("retorna disponivel com tombo mapeado quando não há movimentação pendente", async () => {
-    vi.mocked(prisma.tombo.findUnique).mockResolvedValue({
+    vi.mocked(prisma.tombo.findFirst).mockResolvedValue({
       ...mockTomboBase,
       itensMovimentacao: [],
-    } as Awaited<ReturnType<typeof prisma.tombo.findUnique>>);
+    } as Awaited<ReturnType<typeof prisma.tombo.findFirst>>);
 
     const r = await buscarTomboParaMovimentacao("100");
     expect(r).toEqual({
@@ -162,24 +163,19 @@ describe("buscarTomboParaMovimentacao", () => {
     });
   });
 
-  it("tenta número sem zeros à esquerda quando o primeiro find falha", async () => {
-    vi.mocked(prisma.tombo.findUnique)
-      .mockResolvedValueOnce(null)
-      .mockResolvedValue({
-        ...mockTomboBase,
-        numero: "11706",
-        itensMovimentacao: [],
-      } as Awaited<ReturnType<typeof prisma.tombo.findUnique>>);
+  it("inclui número sem zeros à esquerda na lista de candidatos (lookup único)", async () => {
+    vi.mocked(prisma.tombo.findFirst).mockResolvedValue({
+      ...mockTomboBase,
+      numero: "11706",
+      itensMovimentacao: [],
+    } as Awaited<ReturnType<typeof prisma.tombo.findFirst>>);
 
     const r = await buscarTomboParaMovimentacao("011706");
 
-    expect(prisma.tombo.findUnique).toHaveBeenCalledTimes(2);
-    expect(prisma.tombo.findUnique).toHaveBeenNthCalledWith(1, {
-      where: { numero: "011706" },
-      include: expect.any(Object),
-    });
-    expect(prisma.tombo.findUnique).toHaveBeenNthCalledWith(2, {
-      where: { numero: "11706" },
+    // Era 2 roundtrips; agora é 1 só com `numero: { in: [...] }`.
+    expect(prisma.tombo.findFirst).toHaveBeenCalledTimes(1);
+    expect(prisma.tombo.findFirst).toHaveBeenCalledWith({
+      where: { numero: { in: ["011706", "11706"] } },
       include: expect.any(Object),
     });
     expect(r).toMatchObject({
@@ -188,11 +184,14 @@ describe("buscarTomboParaMovimentacao", () => {
     });
   });
 
-  it("não faz segundo find quando após trim de zeros o número fica vazio", async () => {
-    vi.mocked(prisma.tombo.findUnique).mockResolvedValue(null);
+  it("não inclui número trimmed quando o input é só zeros", async () => {
+    vi.mocked(prisma.tombo.findFirst).mockResolvedValue(null);
 
     const r = await buscarTomboParaMovimentacao("000");
-    expect(prisma.tombo.findUnique).toHaveBeenCalledTimes(1);
+    expect(prisma.tombo.findFirst).toHaveBeenCalledWith({
+      where: { numero: { in: ["000"] } },
+      include: expect.any(Object),
+    });
     expect(r).toEqual({ status: "nao_encontrado", codigo: "000" });
   });
 });

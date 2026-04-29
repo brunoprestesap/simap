@@ -1,5 +1,3 @@
-"use client";
-
 import { NotificationBell } from "@/components/common/NotificationBell";
 
 interface HeaderProps {

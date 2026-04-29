@@ -25,27 +25,35 @@ export function NotificationBell({ userId, isMobile }: NotificationBellProps) {
   const [notificacoes, setNotificacoes] = useState<Notificacao[]>([]);
   const popoverRef = useRef<HTMLDivElement>(null);
 
-  // Poll count every 30s, pausing when tab is hidden
+  // Polling em ~60s com jitter de ±10s para evitar que 100+ usuários sincronizem requests
+  // no mesmo instante. Pausa quando aba está oculta.
   useEffect(() => {
     if (!userId) return;
     const fetchCount = () => contarNaoLidas(userId).then(setCount);
-    fetchCount();
+    const nextDelay = () => 60_000 + Math.floor(Math.random() * 20_000) - 10_000;
 
-    let interval = setInterval(fetchCount, 30_000);
+    fetchCount();
+    let timeout = window.setTimeout(function tick() {
+      fetchCount();
+      timeout = window.setTimeout(tick, nextDelay());
+    }, nextDelay());
 
     const handleVisibility = () => {
       if (document.hidden) {
-        clearInterval(interval);
+        window.clearTimeout(timeout);
       } else {
         fetchCount();
-        interval = setInterval(fetchCount, 30_000);
+        timeout = window.setTimeout(function tick() {
+          fetchCount();
+          timeout = window.setTimeout(tick, nextDelay());
+        }, nextDelay());
       }
     };
 
     document.addEventListener("visibilitychange", handleVisibility);
 
     return () => {
-      clearInterval(interval);
+      window.clearTimeout(timeout);
       document.removeEventListener("visibilitychange", handleVisibility);
     };
   }, [userId]);

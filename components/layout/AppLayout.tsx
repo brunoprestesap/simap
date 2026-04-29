@@ -1,8 +1,5 @@
-"use client";
-
 import type { PerfilUsuario } from "@/lib/generated/prisma/client";
 import { NAV_ITEMS_BY_PROFILE } from "@/lib/types";
-import { signOut } from "next-auth/react";
 import { Sidebar } from "./Sidebar";
 import { BottomNav } from "./BottomNav";
 import { Header } from "./Header";
@@ -18,13 +15,9 @@ interface AppLayoutProps {
 export function AppLayout({ children, perfil, userName, userId, pageTitle }: AppLayoutProps) {
   const items = NAV_ITEMS_BY_PROFILE[perfil];
 
-  function handleLogout() {
-    signOut({ callbackUrl: "/login" });
-  }
-
   return (
     <div className="flex h-screen overflow-hidden">
-      <Sidebar items={items} userName={userName} onLogout={handleLogout} />
+      <Sidebar items={items} userName={userName} />
 
       <div className="flex flex-1 flex-col min-w-0">
         <Header title={pageTitle} userName={userName} userId={userId} />

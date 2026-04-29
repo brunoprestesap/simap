@@ -35,16 +35,23 @@ export async function criarUnidade(input: z.input<typeof unidadeSchema>): Promis
     descricao: normalizeLabel(parsed.data.descricao),
   };
 
-  const existenteCodigo = await prisma.unidade.findFirst({
-    where: { codigo: { equals: data.codigo, mode: "insensitive" } },
+  const existente = await prisma.unidade.findFirst({
+    where: {
+      OR: [
+        { codigo: { equals: data.codigo, mode: "insensitive" } },
+        { descricao: { equals: data.descricao, mode: "insensitive" } },
+      ],
+    },
+    select: { id: true, codigo: true, descricao: true },
   });
-  if (existenteCodigo) return { success: false, error: "Código de unidade já existe." };
-
-  const existenteDescricao = await prisma.unidade.findFirst({
-    where: { descricao: { equals: data.descricao, mode: "insensitive" } },
-  });
-  if (existenteDescricao) {
-    return { success: false, error: "Descrição de unidade já existe." };
+  if (existente) {
+    const colideCodigo = existente.codigo.toLowerCase() === data.codigo.toLowerCase();
+    return {
+      success: false,
+      error: colideCodigo
+        ? "Código de unidade já existe."
+        : "Descrição de unidade já existe.",
+    };
   }
 
   const unidade = await prisma.unidade.create({
@@ -74,18 +81,24 @@ export async function editarUnidade(
     descricao: normalizeLabel(parsed.data.descricao),
   };
 
-  const existenteCodigo = await prisma.unidade.findFirst({
-    where: { codigo: { equals: data.codigo, mode: "insensitive" } },
+  const colidente = await prisma.unidade.findFirst({
+    where: {
+      id: { not: id },
+      OR: [
+        { codigo: { equals: data.codigo, mode: "insensitive" } },
+        { descricao: { equals: data.descricao, mode: "insensitive" } },
+      ],
+    },
+    select: { codigo: true, descricao: true },
   });
-  if (existenteCodigo && existenteCodigo.id !== id) {
-    return { success: false, error: "Código de unidade já existe." };
-  }
-
-  const existenteDescricao = await prisma.unidade.findFirst({
-    where: { descricao: { equals: data.descricao, mode: "insensitive" } },
-  });
-  if (existenteDescricao && existenteDescricao.id !== id) {
-    return { success: false, error: "Descrição de unidade já existe." };
+  if (colidente) {
+    const colideCodigo = colidente.codigo.toLowerCase() === data.codigo.toLowerCase();
+    return {
+      success: false,
+      error: colideCodigo
+        ? "Código de unidade já existe."
+        : "Descrição de unidade já existe.",
+    };
   }
 
   await prisma.unidade.update({
@@ -142,21 +155,25 @@ export async function criarSetor(input: z.input<typeof setorSchema>): Promise<{
     unidadeId: parsed.data.unidadeId,
   };
 
-  const existenteCodigo = await prisma.setor.findFirst({
+  const existente = await prisma.setor.findFirst({
     where: {
       unidadeId: data.unidadeId,
-      codigo: { equals: data.codigo, mode: "insensitive" },
+      OR: [
+        { codigo: { equals: data.codigo, mode: "insensitive" } },
+        { nome: { equals: data.nome, mode: "insensitive" } },
+      ],
     },
+    select: { codigo: true, nome: true },
   });
-  if (existenteCodigo) return { success: false, error: "Código de setor já existe nesta unidade." };
-
-  const existenteNome = await prisma.setor.findFirst({
-    where: {
-      unidadeId: data.unidadeId,
-      nome: { equals: data.nome, mode: "insensitive" },
-    },
-  });
-  if (existenteNome) return { success: false, error: "Nome de setor já existe nesta unidade." };
+  if (existente) {
+    const colideCodigo = existente.codigo.toLowerCase() === data.codigo.toLowerCase();
+    return {
+      success: false,
+      error: colideCodigo
+        ? "Código de setor já existe nesta unidade."
+        : "Nome de setor já existe nesta unidade.",
+    };
+  }
 
   const setor = await prisma.setor.create({
     data,
@@ -186,24 +203,25 @@ export async function editarSetor(
     unidadeId: parsed.data.unidadeId,
   };
 
-  const existenteCodigo = await prisma.setor.findFirst({
+  const colidente = await prisma.setor.findFirst({
     where: {
+      id: { not: id },
       unidadeId: data.unidadeId,
-      codigo: { equals: data.codigo, mode: "insensitive" },
+      OR: [
+        { codigo: { equals: data.codigo, mode: "insensitive" } },
+        { nome: { equals: data.nome, mode: "insensitive" } },
+      ],
     },
+    select: { codigo: true, nome: true },
   });
-  if (existenteCodigo && existenteCodigo.id !== id) {
-    return { success: false, error: "Código de setor já existe nesta unidade." };
-  }
-
-  const existenteNome = await prisma.setor.findFirst({
-    where: {
-      unidadeId: data.unidadeId,
-      nome: { equals: data.nome, mode: "insensitive" },
-    },
-  });
-  if (existenteNome && existenteNome.id !== id) {
-    return { success: false, error: "Nome de setor já existe nesta unidade." };
+  if (colidente) {
+    const colideCodigo = colidente.codigo.toLowerCase() === data.codigo.toLowerCase();
+    return {
+      success: false,
+      error: colideCodigo
+        ? "Código de setor já existe nesta unidade."
+        : "Nome de setor já existe nesta unidade.",
+    };
   }
 
   await prisma.setor.update({

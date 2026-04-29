@@ -15,9 +15,9 @@ import {
   BarChart3,
   PanelLeftClose,
   PanelLeft,
-  LogOut,
 } from "lucide-react";
 import type { NavItem } from "@/lib/types";
+import { LogoutButton } from "./LogoutButton";
 
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   Home,
@@ -34,10 +34,9 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
 interface SidebarProps {
   items: NavItem[];
   userName: string;
-  onLogout?: () => void;
 }
 
-export function Sidebar({ items, userName, onLogout }: SidebarProps) {
+export function Sidebar({ items, userName }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
 
@@ -96,16 +95,7 @@ export function Sidebar({ items, userName, onLogout }: SidebarProps) {
           </div>
         )}
         <div className="flex flex-col gap-1">
-          {onLogout && (
-            <button
-              onClick={onLogout}
-              className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-colors"
-              aria-label="Sair"
-            >
-              <LogOut className="h-5 w-5 shrink-0" />
-              {!collapsed && <span>Sair</span>}
-            </button>
-          )}
+          <LogoutButton collapsed={collapsed} />
           <button
             onClick={() => setCollapsed(!collapsed)}
             className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-colors"

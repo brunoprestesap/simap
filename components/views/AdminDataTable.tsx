@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Search, Plus } from "lucide-react";
+import { useDebouncedCallback } from "@/lib/hooks/use-debounced-callback";
 
 interface Column<T> {
   header: string;
@@ -32,10 +33,13 @@ export function AdminDataTable<T>({
   emptyMessage = "Nenhum registro encontrado.",
 }: AdminDataTableProps<T>) {
   const [busca, setBusca] = useState("");
+  const debouncedSearch = useDebouncedCallback((valor: string) => {
+    onSearch?.(valor);
+  }, 300);
 
   function handleSearch(valor: string) {
     setBusca(valor);
-    onSearch?.(valor);
+    debouncedSearch(valor);
   }
 
   return (
@@ -50,6 +54,7 @@ export function AdminDataTable<T>({
               value={busca}
               onChange={(e) => handleSearch(e.target.value)}
               placeholder={searchPlaceholder}
+              aria-label={searchPlaceholder}
               className="h-8 w-full rounded-md border border-border bg-background pl-9 pr-3 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
             />
           </div>

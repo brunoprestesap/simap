@@ -44,6 +44,8 @@ describe("admin actions", () => {
   it("criarUnidade deve bloquear código duplicado (case-insensitive)", async () => {
     vi.mocked(prisma.unidade.findFirst).mockResolvedValueOnce({
       id: "u-existente",
+      codigo: "SEC01",
+      descricao: "Outra descrição",
     } as Awaited<ReturnType<typeof prisma.unidade.findFirst>>);
 
     const result = await criarUnidade({
@@ -56,6 +58,26 @@ describe("admin actions", () => {
       error: "Código de unidade já existe.",
     });
     expect(prisma.unidade.create).not.toHaveBeenCalled();
+    // Refactor combinou os dois findFirst em um só com OR.
+    expect(prisma.unidade.findFirst).toHaveBeenCalledTimes(1);
+  });
+
+  it("criarUnidade deve bloquear descrição duplicada e diferenciar de colisão de código", async () => {
+    vi.mocked(prisma.unidade.findFirst).mockResolvedValueOnce({
+      id: "u-existente",
+      codigo: "OUTRO",
+      descricao: "Secretaria 01",
+    } as Awaited<ReturnType<typeof prisma.unidade.findFirst>>);
+
+    const result = await criarUnidade({
+      codigo: " novo01 ",
+      descricao: " Secretaria 01 ",
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: "Descrição de unidade já existe.",
+    });
   });
 
   it("editarUsuarioLotacao deve rejeitar setor fora da unidade", async () => {

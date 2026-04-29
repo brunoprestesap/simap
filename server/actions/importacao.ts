@@ -178,6 +178,7 @@ function dadosResponsavelTomboDoCsv(
 // ─── Confirmação (processamento em batch) ─────────────────
 
 const BATCH_SIZE = 500;
+const UPDATE_CONCURRENCY = 20;
 
 export async function confirmarImportacaoCsv(
   formData: FormData,
@@ -221,47 +222,51 @@ export async function confirmarImportacaoCsv(
     const paraAtualizar = batch.filter((r) => numerosExistentes.has(r.numeroTombo));
     const paraCriar = batch.filter((r) => !numerosExistentes.has(r.numeroTombo));
 
-    // Updates em paralelo (limitado pelo batch)
-    const updatePromises = paraAtualizar.map((row) => {
-      const unidadeId = row.codigoLotacao
-        ? mapaUnidades.get(row.codigoLotacao)
-        : undefined;
-      const setorId =
-        row.codigoSetor && row.codigoLotacao
-          ? mapaSetores.get(
-              `${row.codigoSetor}|${mapaUnidades.get(row.codigoLotacao)}`,
-            )
-          : undefined;
-      const resp = dadosResponsavelTomboDoCsv(row, mapaUsuarioResp);
+    // Updates em sub-lotes de UPDATE_CONCURRENCY para não saturar o pool do Postgres
+    // quando BATCH_SIZE é grande (500 conexões em paralelo derruba a connection pool default).
+    for (let i = 0; i < paraAtualizar.length; i += UPDATE_CONCURRENCY) {
+      const chunk = paraAtualizar.slice(i, i + UPDATE_CONCURRENCY);
+      await Promise.all(
+        chunk.map((row) => {
+          const unidadeId = row.codigoLotacao
+            ? mapaUnidades.get(row.codigoLotacao)
+            : undefined;
+          const setorId =
+            row.codigoSetor && row.codigoLotacao
+              ? mapaSetores.get(
+                  `${row.codigoSetor}|${mapaUnidades.get(row.codigoLotacao)}`,
+                )
+              : undefined;
+          const resp = dadosResponsavelTomboDoCsv(row, mapaUsuarioResp);
 
-      return prisma.tombo
-        .update({
-          where: { numero: row.numeroTombo },
-          data: {
-            descricaoMaterial: row.descricaoMaterial,
-            codigoFornecedor: row.codigoFornecedor ?? null,
-            nomeFornecedor: row.nomeFornecedor ?? null,
-            ...(unidadeId ? { unidadeId } : {}),
-            ...(setorId ? { setorId } : {}),
-            matriculaResponsavel: resp.matriculaResponsavel,
-            nomeResponsavel: resp.nomeResponsavel,
-            usuarioResponsavelId: resp.usuarioResponsavelId,
-            saida: row.saida ?? null,
-          },
-        })
-        .then(() => {
-          atualizados++;
-        })
-        .catch((error: Error) => {
-          errosProcessamento++;
-          errosDetalhe.push({
-            linha: registros.indexOf(row) + 2,
-            mensagem: `Erro ao atualizar tombo ${row.numeroTombo}: ${error.message}`,
-          });
-        });
-    });
-
-    await Promise.all(updatePromises);
+          return prisma.tombo
+            .update({
+              where: { numero: row.numeroTombo },
+              data: {
+                descricaoMaterial: row.descricaoMaterial,
+                codigoFornecedor: row.codigoFornecedor ?? null,
+                nomeFornecedor: row.nomeFornecedor ?? null,
+                ...(unidadeId ? { unidadeId } : {}),
+                ...(setorId ? { setorId } : {}),
+                matriculaResponsavel: resp.matriculaResponsavel,
+                nomeResponsavel: resp.nomeResponsavel,
+                usuarioResponsavelId: resp.usuarioResponsavelId,
+                saida: row.saida ?? null,
+              },
+            })
+            .then(() => {
+              atualizados++;
+            })
+            .catch((error: Error) => {
+              errosProcessamento++;
+              errosDetalhe.push({
+                linha: registros.indexOf(row) + 2,
+                mensagem: `Erro ao atualizar tombo ${row.numeroTombo}: ${error.message}`,
+              });
+            });
+        }),
+      );
+    }
 
     // Creates em batch via createMany
     const dadosParaCriar = paraCriar

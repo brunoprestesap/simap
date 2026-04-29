@@ -86,9 +86,13 @@ export async function buscarMovimentacaoDetalhada(id: string) {
       tecnico: { select: { id: true, nome: true, matricula: true } },
       registradoSicamPor: { select: { id: true, nome: true, matricula: true } },
       itens: {
-        include: {
+        select: {
+          id: true,
           tombo: {
-            include: {
+            select: {
+              id: true,
+              numero: true,
+              descricaoMaterial: true,
               setor: { select: { id: true, nome: true } },
               usuarioResponsavel: { select: { id: true, nome: true } },
             },
