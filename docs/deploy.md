@@ -59,12 +59,12 @@ POSTGRES_PASSWORD="trocar-por-segredo-forte"
 POSTGRES_DB="simap"
 DATABASE_URL="postgresql://simap:trocar-por-segredo-forte@db:5432/simap?schema=public"
 APP_PORT="3000"
-APP_URL="https://simap.intra.jfap"
-NEXTAUTH_URL="https://simap.intra.jfap"
+APP_URL="https://simap.ap.trf1.gov.br"
+NEXTAUTH_URL="https://simap.ap.trf1.gov.br"
 NEXTAUTH_URL_INTERNAL="http://app:3000"
 AUTH_TRUST_HOST="true"
 NEXTAUTH_SECRET="valor-seguro"
-APP_DOMAIN="simap.intra.jfap"
+APP_DOMAIN="simap.ap.trf1.gov.br"
 BACKUP_RETENTION_DAYS="14"
 BACKUP_INTERVAL_SECONDS="86400"
 ```
@@ -99,8 +99,8 @@ npm run deploy:bootstrap:first -- \
   --ssh-key "$HOME/.ssh/id_rsa" \
   --ssh-passphrase "passphrase-da-chave-ou-vazio" \
   --env-file ".env.production" \
-  --tls-cert-file "/caminho/simap.intra.jfap.crt" \
-  --tls-key-file "/caminho/simap.intra.jfap.key" \
+  --tls-cert-file "/caminho/simap.ap.trf1.gov.br.crt" \
+  --tls-key-file "/caminho/simap.ap.trf1.gov.br.key" \
   --run-workflow
 ```
 
