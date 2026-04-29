@@ -3,41 +3,71 @@
 import { requireAuthAction } from "@/lib/auth-guard";
 import { avaliarPermissaoConfirmacaoMovimentacao } from "@/lib/permissions/movimentacao-confirmacao";
 import { prisma } from "@/lib/prisma";
-import { registrarAuditoria } from "@/server/services/audit";
 
-async function concluirConfirmacao(
-  movimentacaoId: string,
-  tecnicoId: string,
-  confirmadoPorNome: string,
-  auditoriaDetalhes: Record<string, string>,
-  auditoriaUsuarioId: string | null,
-): Promise<{ success: boolean; error?: string }> {
-  await prisma.movimentacao.update({
-    where: { id: movimentacaoId },
-    data: {
-      status: "CONFIRMADA_ORIGEM",
-      confirmadoEm: new Date(),
-      confirmadoPorNome,
-    },
+interface ConcluirConfirmacaoArgs {
+  movimentacaoId: string;
+  tecnicoId: string;
+  confirmadoPorNome: string;
+  auditoriaDetalhes: Record<string, string>;
+  auditoriaUsuarioId: string | null;
+}
+
+// Confirmação atômica: o updateMany com guarda no WHERE garante que duas requisições
+// concorrentes (duplo-clique no link público, retries de cliente) não consigam confirmar
+// duas vezes — a segunda recebe count === 0 e é descartada antes de gerar auditoria/notificação.
+async function concluirConfirmacao({
+  movimentacaoId,
+  tecnicoId,
+  confirmadoPorNome,
+  auditoriaDetalhes,
+  auditoriaUsuarioId,
+}: ConcluirConfirmacaoArgs): Promise<{ success: boolean; error?: string }> {
+  const confirmou = await prisma.$transaction(async (tx) => {
+    const r = await tx.movimentacao.updateMany({
+      where: {
+        id: movimentacaoId,
+        status: "PENDENTE_CONFIRMACAO",
+        tokenExpiraEm: { gt: new Date() },
+      },
+      data: {
+        status: "CONFIRMADA_ORIGEM",
+        confirmadoEm: new Date(),
+        confirmadoPorNome,
+      },
+    });
+    if (r.count === 0) return false;
+
+    await tx.auditLog.create({
+      data: {
+        acao: "CONFIRMACAO_MOVIMENTACAO",
+        entidade: "Movimentacao",
+        entidadeId: movimentacaoId,
+        usuarioId: auditoriaUsuarioId,
+        detalhes: auditoriaDetalhes,
+      },
+    });
+
+    return true;
   });
 
-  await registrarAuditoria(
-    "CONFIRMACAO_MOVIMENTACAO",
-    "Movimentacao",
-    movimentacaoId,
-    auditoriaUsuarioId,
-    auditoriaDetalhes,
-  );
+  if (!confirmou) {
+    return { success: false, error: "Esta movimentação já foi confirmada ou expirou." };
+  }
 
-  await prisma.notificacao.create({
-    data: {
-      tipo: "CONFIRMACAO_REALIZADA",
-      titulo: "Confirmação realizada",
-      mensagem: `${confirmadoPorNome} confirmou a entrada dos tombos da movimentação.`,
-      link: `/movimentacao/${movimentacaoId}`,
-      usuarioDestinoId: tecnicoId,
-    },
-  });
+  // Notificação fora da transação: fire-and-forget, não bloqueia resposta.
+  prisma.notificacao
+    .create({
+      data: {
+        tipo: "CONFIRMACAO_REALIZADA",
+        titulo: "Confirmação realizada",
+        mensagem: `${confirmadoPorNome} confirmou a entrada dos tombos da movimentação.`,
+        link: `/movimentacao/${movimentacaoId}`,
+        usuarioDestinoId: tecnicoId,
+      },
+    })
+    .catch(() => {
+      // Já confirmado no banco; falha de notificação não desfaz a confirmação.
+    });
 
   return { success: true };
 }
@@ -51,27 +81,20 @@ export async function confirmarMovimentacaoPublica(
 }> {
   const movimentacao = await prisma.movimentacao.findUnique({
     where: { tokenConfirmacao: token },
+    select: { id: true, tecnicoId: true },
   });
 
   if (!movimentacao) {
     return { success: false, error: "Token inválido." };
   }
 
-  if (movimentacao.status !== "PENDENTE_CONFIRMACAO") {
-    return { success: false, error: "Esta movimentação já foi confirmada." };
-  }
-
-  if (new Date() > movimentacao.tokenExpiraEm) {
-    return { success: false, error: "Este link expirou." };
-  }
-
-  return concluirConfirmacao(
-    movimentacao.id,
-    movimentacao.tecnicoId,
-    nomConfirmador,
-    { confirmadoPorNome: nomConfirmador, token },
-    null,
-  );
+  return concluirConfirmacao({
+    movimentacaoId: movimentacao.id,
+    tecnicoId: movimentacao.tecnicoId,
+    confirmadoPorNome: nomConfirmador,
+    auditoriaDetalhes: { confirmadoPorNome: nomConfirmador, token },
+    auditoriaUsuarioId: null,
+  });
 }
 
 export async function confirmarMovimentacaoLogada(
@@ -111,11 +134,11 @@ export async function confirmarMovimentacaoLogada(
     };
   }
 
-  return concluirConfirmacao(
-    movimentacao.id,
-    movimentacao.tecnicoId,
-    user!.nome,
-    { confirmadoPorNome: user!.nome, canal: "UI_LOGADA" },
-    user!.id,
-  );
+  return concluirConfirmacao({
+    movimentacaoId: movimentacao.id,
+    tecnicoId: movimentacao.tecnicoId,
+    confirmadoPorNome: user!.nome,
+    auditoriaDetalhes: { confirmadoPorNome: user!.nome, canal: "UI_LOGADA" },
+    auditoriaUsuarioId: user!.id,
+  });
 }

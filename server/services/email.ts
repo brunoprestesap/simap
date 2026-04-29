@@ -15,6 +15,11 @@ const transporter = nodemailer.createTransport({
   tls: {
     rejectUnauthorized: false,
   },
+  // Sem estes timeouts uma queda de SMTP pendura conexões indefinidamente, vazando handles
+  // do Node em fluxos fire-and-forget (notificação de movimentação, link de confirmação).
+  connectionTimeout: 5_000,
+  greetingTimeout: 5_000,
+  socketTimeout: 10_000,
 });
 
 export async function enviarEmail(

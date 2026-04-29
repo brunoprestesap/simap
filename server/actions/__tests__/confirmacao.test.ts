@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { confirmarMovimentacaoLogada } from "@/server/actions/confirmacao";
+import {
+  confirmarMovimentacaoLogada,
+  confirmarMovimentacaoPublica,
+} from "@/server/actions/confirmacao";
 import { requireAuthAction } from "@/lib/auth-guard";
 import { avaliarPermissaoConfirmacaoMovimentacao } from "@/lib/permissions/movimentacao-confirmacao";
 import { prisma } from "@/lib/prisma";
@@ -12,25 +15,44 @@ vi.mock("@/lib/permissions/movimentacao-confirmacao", () => ({
   avaliarPermissaoConfirmacaoMovimentacao: vi.fn(),
 }));
 
-vi.mock("@/server/services/audit", () => ({
-  registrarAuditoria: vi.fn(),
-}));
+vi.mock("@/lib/prisma", () => {
+  const movimentacao = {
+    findUnique: vi.fn(),
+    updateMany: vi.fn(),
+  };
+  const auditLog = { create: vi.fn() };
+  const notificacao = { create: vi.fn() };
+  return {
+    prisma: {
+      movimentacao,
+      auditLog,
+      notificacao,
+      $transaction: vi.fn(),
+    },
+  };
+});
 
-vi.mock("@/lib/prisma", () => ({
-  prisma: {
-    movimentacao: {
-      findUnique: vi.fn(),
-      update: vi.fn(),
-    },
-    notificacao: {
-      create: vi.fn(),
-    },
-  },
-}));
+type Tx = {
+  movimentacao: { updateMany: ReturnType<typeof vi.fn> };
+  auditLog: { create: ReturnType<typeof vi.fn> };
+};
+
+function mockTransactionAsTx() {
+  // Espelha a API que o action usa: prisma.$transaction(async tx => {...}).
+  // Passa um "tx" que delega aos mocks de prisma.movimentacao / prisma.auditLog.
+  vi.mocked(prisma.$transaction).mockImplementation(
+    (async (cb: (tx: Tx) => Promise<unknown>) =>
+      cb({
+        movimentacao: prisma.movimentacao,
+        auditLog: prisma.auditLog,
+      } as unknown as Tx)) as unknown as typeof prisma.$transaction,
+  );
+}
 
 describe("confirmarMovimentacaoLogada", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockTransactionAsTx();
   });
 
   it("deve retornar erro de permissão quando usuário não é autorizado", async () => {
@@ -61,6 +83,8 @@ describe("confirmarMovimentacaoLogada", () => {
       success: false,
       error: "Somente usuários autorizados da unidade de destino podem confirmar.",
     });
+    expect(prisma.movimentacao.updateMany).not.toHaveBeenCalled();
+    expect(prisma.auditLog.create).not.toHaveBeenCalled();
   });
 
   it("deve confirmar movimentação quando usuário é autorizado", async () => {
@@ -84,9 +108,7 @@ describe("confirmarMovimentacaoLogada", () => {
       podeConfirmar: true,
       motivo: "OK",
     });
-    vi.mocked(prisma.movimentacao.update).mockResolvedValue({
-      id: "mov-2",
-    } as Awaited<ReturnType<typeof prisma.movimentacao.update>>);
+    vi.mocked(prisma.movimentacao.updateMany).mockResolvedValue({ count: 1 });
     vi.mocked(prisma.notificacao.create).mockResolvedValue({
       id: "not-1",
     } as Awaited<ReturnType<typeof prisma.notificacao.create>>);
@@ -94,7 +116,70 @@ describe("confirmarMovimentacaoLogada", () => {
     const result = await confirmarMovimentacaoLogada("mov-2");
 
     expect(result).toEqual({ success: true });
-    expect(prisma.movimentacao.update).toHaveBeenCalledTimes(1);
-    expect(prisma.notificacao.create).toHaveBeenCalledTimes(1);
+    expect(prisma.movimentacao.updateMany).toHaveBeenCalledTimes(1);
+    expect(prisma.auditLog.create).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("confirmarMovimentacaoPublica — atomicidade contra duplo-clique", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockTransactionAsTx();
+  });
+
+  it("deve confirmar UMA única vez quando o link é clicado em rajada (race TOCTOU)", async () => {
+    vi.mocked(prisma.movimentacao.findUnique).mockResolvedValue({
+      id: "mov-race",
+      tecnicoId: "tec-99",
+    } as Awaited<ReturnType<typeof prisma.movimentacao.findUnique>>);
+
+    // Simula o cenário: a 1ª chamada do updateMany consegue (count: 1, status muda no DB);
+    // a 2ª chamada não encontra mais nada com `status = PENDENTE_CONFIRMACAO` (count: 0).
+    vi.mocked(prisma.movimentacao.updateMany)
+      .mockResolvedValueOnce({ count: 1 })
+      .mockResolvedValueOnce({ count: 0 });
+
+    vi.mocked(prisma.notificacao.create).mockResolvedValue({
+      id: "not-1",
+    } as Awaited<ReturnType<typeof prisma.notificacao.create>>);
+
+    const [r1, r2] = await Promise.all([
+      confirmarMovimentacaoPublica("token-x", "Maria"),
+      confirmarMovimentacaoPublica("token-x", "Maria"),
+    ]);
+
+    const successes = [r1, r2].filter((r) => r.success).length;
+    const failures = [r1, r2].filter((r) => !r.success);
+
+    expect(successes).toBe(1);
+    expect(failures).toHaveLength(1);
+    expect(failures[0].error).toMatch(/já foi confirmada|expirou/i);
+    expect(prisma.auditLog.create).toHaveBeenCalledTimes(1);
+  });
+
+  it("não deve gravar auditoria nem notificação quando token está expirado", async () => {
+    vi.mocked(prisma.movimentacao.findUnique).mockResolvedValue({
+      id: "mov-exp",
+      tecnicoId: "tec-1",
+    } as Awaited<ReturnType<typeof prisma.movimentacao.findUnique>>);
+
+    // Guarda no WHERE da updateMany (`tokenExpiraEm: { gt: now() }`) faria o DB retornar 0
+    // — mockamos esse comportamento aqui.
+    vi.mocked(prisma.movimentacao.updateMany).mockResolvedValue({ count: 0 });
+
+    const r = await confirmarMovimentacaoPublica("token-exp", "Maria");
+
+    expect(r.success).toBe(false);
+    expect(prisma.auditLog.create).not.toHaveBeenCalled();
+    expect(prisma.notificacao.create).not.toHaveBeenCalled();
+  });
+
+  it("deve retornar erro quando token é inválido (movimentação não existe)", async () => {
+    vi.mocked(prisma.movimentacao.findUnique).mockResolvedValue(null);
+
+    const r = await confirmarMovimentacaoPublica("token-fake", "Maria");
+
+    expect(r).toEqual({ success: false, error: "Token inválido." });
+    expect(prisma.movimentacao.updateMany).not.toHaveBeenCalled();
   });
 });

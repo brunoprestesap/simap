@@ -4,7 +4,6 @@ import { z } from "zod/v4";
 import { requireRoleAction } from "@/lib/auth-guard";
 import { parseDateOnlyLocal } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
-import { registrarAuditoria } from "@/server/services/audit";
 
 const registroSicamSchema = z.object({
   movimentacaoId: z.string().min(1, "ID da movimentação é obrigatório"),
@@ -92,45 +91,60 @@ export async function registrarNoSicam(input: z.input<typeof registroSicamSchema
       select: { id: true, matricula: true, nome: true },
     }));
 
-  // Update movimentacao status + SICAM data
-  await prisma.movimentacao.update({
-    where: { id: movimentacaoId },
-    data: {
-      status: "REGISTRADA_SICAM",
-      protocoloSicam,
-      dataRegistroSicam: dataRegistro,
-      observacoesSicam: observacoesSicam || null,
-      registradoSicamPorId: user!.id,
-    },
-  });
-
-  // Update tombo lotação (move to destination unit/setor)
   const tomboIds = movimentacao.itens.map((i) => i.tomboId);
-  await prisma.tombo.updateMany({
-    where: { id: { in: tomboIds } },
-    data: {
-      unidadeId: movimentacao.unidadeDestinoId,
-      setorId: movimentacao.setorDestinoId ?? null,
-      usuarioResponsavelId: responsavelUnidadeDestino?.id ?? null,
-      matriculaResponsavel: responsavelUnidadeDestino?.matricula ?? null,
-      nomeResponsavel: responsavelUnidadeDestino?.nome ?? null,
-    },
+
+  // Atômico: status + lotação dos tombos + auditoria. Falha em qualquer write reverte tudo.
+  // Guarda no WHERE garante que apenas movimentações em CONFIRMADA_ORIGEM sejam atualizadas
+  // (defesa contra race com outro registro SICAM concorrente).
+  const updated = await prisma.$transaction(async (tx) => {
+    const r = await tx.movimentacao.updateMany({
+      where: { id: movimentacaoId, status: "CONFIRMADA_ORIGEM" },
+      data: {
+        status: "REGISTRADA_SICAM",
+        protocoloSicam,
+        dataRegistroSicam: dataRegistro,
+        observacoesSicam: observacoesSicam || null,
+        registradoSicamPorId: user!.id,
+      },
+    });
+    if (r.count === 0) return false;
+
+    await tx.tombo.updateMany({
+      where: { id: { in: tomboIds } },
+      data: {
+        unidadeId: movimentacao.unidadeDestinoId,
+        setorId: movimentacao.setorDestinoId ?? null,
+        usuarioResponsavelId: responsavelUnidadeDestino?.id ?? null,
+        matriculaResponsavel: responsavelUnidadeDestino?.matricula ?? null,
+        nomeResponsavel: responsavelUnidadeDestino?.nome ?? null,
+      },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        acao: "REGISTRO_SICAM",
+        entidade: "Movimentacao",
+        entidadeId: movimentacaoId,
+        usuarioId: user!.id,
+        detalhes: {
+          protocoloSicam,
+          dataRegistroSicam,
+          origem: movimentacao.unidadeOrigem.descricao,
+          destino: movimentacao.unidadeDestino.descricao,
+          tombos: movimentacao.itens.map((i) => i.tombo.numero),
+        },
+      },
+    });
+
+    return true;
   });
 
-  // Audit log
-  await registrarAuditoria(
-    "REGISTRO_SICAM",
-    "Movimentacao",
-    movimentacaoId,
-    user!.id,
-    {
-      protocoloSicam,
-      dataRegistroSicam,
-      origem: movimentacao.unidadeOrigem.descricao,
-      destino: movimentacao.unidadeDestino.descricao,
-      tombos: movimentacao.itens.map((i) => i.tombo.numero),
-    },
-  );
+  if (!updated) {
+    return {
+      success: false,
+      error: "Movimentação já registrada por outro usuário ou não está mais em CONFIRMADA_ORIGEM.",
+    };
+  }
 
   // Notifications
   const notificacaoDestinatarios = new Set<string>();
