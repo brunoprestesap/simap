@@ -17,6 +17,7 @@
 
 # local agent / plugin state
 .superpowers/
+.claude/settings.local.json
 
 # next.js
 /.next/
