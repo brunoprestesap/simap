@@ -32,9 +32,12 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 
-# Prisma CLI + engines para `prisma migrate deploy` em runtime
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
+# Prisma CLI + todas as deps transitivas (pathe, defu, dotenv, etc.) e config TS
+# para `prisma migrate deploy` em runtime sem depender do registry npm.
+# O standalone Next ja tem seu proprio node_modules minimo; este COPY sobrescreve
+# com o conjunto completo do builder (que e superset do standalone).
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=nextjs:nodejs /app/prisma.config.ts ./prisma.config.ts
 
 USER nextjs
 
