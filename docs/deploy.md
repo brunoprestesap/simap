@@ -119,6 +119,118 @@ gh run list --workflow "CI/CD VPS"
 gh run watch
 ```
 
+## Deploy manual a partir da máquina do dev
+
+Use este procedimento quando o `Deploy on VPS` do workflow CI/CD falhar (típico: o runner cloud do GitHub não tem rota para o IP privado da VPS interna). A máquina do dev, por estar dentro da rede TRF/JFAP, alcança a VPS por SSH.
+
+### Pré-requisitos
+
+- Chave SSH dedicada autorizada em `srvsimap-ap@<VPS>` (ver passo 1 do bootstrap).
+- `.env.production` local atualizado (mesmo conteúdo do GitHub Secret `APP_ENV_FILE`).
+- Certs em `~/certs/simap/` com chave + cert para `${APP_DOMAIN}`.
+- Imagem nova já publicada no GHCR (jobs `Lint, Test and Build` e `Build and Push Image` do workflow ficaram verdes).
+
+### 1) Sincronizar arquivos com a VPS
+
+A partir da raiz do repo, no Git Bash:
+
+```bash
+VPS_USER=srvsimap-ap
+VPS_HOST=172.18.10.158
+VPS_PATH=/opt/simap
+SSH_KEY=~/.ssh/id_ed25519_simap
+
+# .env de produção
+scp -i $SSH_KEY .env.production $VPS_USER@$VPS_HOST:$VPS_PATH/.env
+
+# certs
+scp -i $SSH_KEY ~/certs/simap/${APP_DOMAIN}.crt $VPS_USER@$VPS_HOST:$VPS_PATH/deploy/certs/server.crt
+scp -i $SSH_KEY ~/certs/simap/${APP_DOMAIN}.key $VPS_USER@$VPS_HOST:$VPS_PATH/deploy/certs/server.key
+
+# scripts e configs do deploy
+scp -i $SSH_KEY \
+  deploy/deploy.sh \
+  deploy/docker-compose.prod.yml \
+  deploy/nginx.conf.template \
+  deploy/prepare-vps.sh \
+  $VPS_USER@$VPS_HOST:$VPS_PATH/deploy/
+```
+
+### 2) Ajustar permissões e gerar nginx.conf na VPS
+
+```bash
+ssh -i $SSH_KEY $VPS_USER@$VPS_HOST '
+  chmod 600 /opt/simap/.env /opt/simap/deploy/certs/server.key
+  chmod 644 /opt/simap/deploy/certs/server.crt
+  chmod +x /opt/simap/deploy/deploy.sh /opt/simap/deploy/prepare-vps.sh
+
+  cd /opt/simap
+  set -a; . ./.env; set +a
+  sed "s|\${APP_DOMAIN}|${APP_DOMAIN}|g" deploy/nginx.conf.template > deploy/nginx.conf
+'
+```
+
+### 3) Pull da imagem e rodar migrations
+
+> **Atenção**: o `deploy/deploy.sh` faz `docker login ghcr.io` antes do pull. Se o pacote no GHCR estiver **público**, pode pular o login. Se estiver **privado**, exporte `GHCR_USER` (seu user GitHub) e `GHCR_TOKEN` (PAT com `read:packages`) antes de rodar.
+
+```bash
+ssh -i $SSH_KEY $VPS_USER@$VPS_HOST '
+  cd /opt/simap
+  set -a; . ./.env; set +a
+  export GHCR_IMAGE="<owner>/<repo>"
+  export IMAGE_TAG="latest"
+
+  # Pull (público — não precisa login)
+  docker pull "ghcr.io/${GHCR_IMAGE}:${IMAGE_TAG}"
+
+  # Sobe DB e aguarda saudável
+  COMPOSE="docker compose -f deploy/docker-compose.prod.yml"
+  $COMPOSE up -d db
+  for i in 1 2 3 4 5 6 7 8 9 10; do
+    $COMPOSE ps db --format json | grep -q "\"Health\":\"healthy\"" && break
+    sleep 3
+  done
+
+  # Migrate (precisa do Dockerfile já com node_modules completo + prisma.config.ts)
+  $COMPOSE run --rm --entrypoint "" app \
+    node /app/node_modules/prisma/build/index.js migrate deploy
+'
+```
+
+### 4) Subir app, proxy e backup
+
+```bash
+ssh -i $SSH_KEY $VPS_USER@$VPS_HOST '
+  cd /opt/simap
+  set -a; . ./.env; set +a
+  export GHCR_IMAGE="<owner>/<repo>"
+  export IMAGE_TAG="latest"
+
+  COMPOSE="docker compose -f deploy/docker-compose.prod.yml"
+  $COMPOSE up -d app
+  $COMPOSE up -d proxy
+  $COMPOSE up -d db-backup
+  $COMPOSE ps
+'
+```
+
+### 5) Validar
+
+```bash
+ssh -i $SSH_KEY $VPS_USER@$VPS_HOST '
+  echo "=== /api/health via app direto ==="
+  docker exec simap-app wget -qO- http://127.0.0.1:3000/api/health
+  echo
+  echo "=== /api/health via proxy HTTPS ==="
+  curl -ksS --resolve ${APP_DOMAIN}:443:127.0.0.1 https://${APP_DOMAIN}/api/health
+'
+```
+
+Esperado: `{"ok":true,"service":"simap","db":"up"}` em ambos os casos.
+
+> Veja a seção [Checklist pós-deploy](#checklist-pós-deploy) para validações adicionais.
+
 ## Rollback
 
 Se uma versão falhar:
