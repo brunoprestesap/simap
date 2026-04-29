@@ -128,10 +128,21 @@ describe("confirmarMovimentacaoPublica — atomicidade contra duplo-clique", () 
   });
 
   it("deve confirmar UMA única vez quando o link é clicado em rajada (race TOCTOU)", async () => {
-    vi.mocked(prisma.movimentacao.findUnique).mockResolvedValue({
-      id: "mov-race",
-      tecnicoId: "tec-99",
-    } as Awaited<ReturnType<typeof prisma.movimentacao.findUnique>>);
+    // 1ª lookup do token — resolve a movimentação. 2ª lookup pós-falha — para distinguir
+    // a mensagem entre "já confirmada" e "expirou".
+    vi.mocked(prisma.movimentacao.findUnique).mockImplementation(
+      (async (args: { where: { tokenConfirmacao?: string; id?: string } }) => {
+        if (args.where.tokenConfirmacao) {
+          return { id: "mov-race", tecnicoId: "tec-99" } as Awaited<
+            ReturnType<typeof prisma.movimentacao.findUnique>
+          >;
+        }
+        return {
+          status: "CONFIRMADA_ORIGEM",
+          tokenExpiraEm: new Date(Date.now() + 60_000),
+        } as Awaited<ReturnType<typeof prisma.movimentacao.findUnique>>;
+      }) as unknown as typeof prisma.movimentacao.findUnique,
+    );
 
     // Simula o cenário: a 1ª chamada do updateMany consegue (count: 1, status muda no DB);
     // a 2ª chamada não encontra mais nada com `status = PENDENTE_CONFIRMACAO` (count: 0).
@@ -153,23 +164,31 @@ describe("confirmarMovimentacaoPublica — atomicidade contra duplo-clique", () 
 
     expect(successes).toBe(1);
     expect(failures).toHaveLength(1);
-    expect(failures[0].error).toMatch(/já foi confirmada|expirou/i);
+    expect(failures[0].error).toBe("Esta movimentação já foi confirmada.");
     expect(prisma.auditLog.create).toHaveBeenCalledTimes(1);
   });
 
-  it("não deve gravar auditoria nem notificação quando token está expirado", async () => {
-    vi.mocked(prisma.movimentacao.findUnique).mockResolvedValue({
-      id: "mov-exp",
-      tecnicoId: "tec-1",
-    } as Awaited<ReturnType<typeof prisma.movimentacao.findUnique>>);
+  it("retorna 'link expirou' (e não 'já confirmada') quando token está expirado", async () => {
+    vi.mocked(prisma.movimentacao.findUnique).mockImplementation(
+      (async (args: { where: { tokenConfirmacao?: string; id?: string } }) => {
+        if (args.where.tokenConfirmacao) {
+          return { id: "mov-exp", tecnicoId: "tec-1" } as Awaited<
+            ReturnType<typeof prisma.movimentacao.findUnique>
+          >;
+        }
+        // Status ainda é PENDENTE_CONFIRMACAO; a guarda no updateMany rejeitou só pelo prazo.
+        return {
+          status: "PENDENTE_CONFIRMACAO",
+          tokenExpiraEm: new Date(Date.now() - 60_000),
+        } as Awaited<ReturnType<typeof prisma.movimentacao.findUnique>>;
+      }) as unknown as typeof prisma.movimentacao.findUnique,
+    );
 
-    // Guarda no WHERE da updateMany (`tokenExpiraEm: { gt: now() }`) faria o DB retornar 0
-    // — mockamos esse comportamento aqui.
     vi.mocked(prisma.movimentacao.updateMany).mockResolvedValue({ count: 0 });
 
     const r = await confirmarMovimentacaoPublica("token-exp", "Maria");
 
-    expect(r.success).toBe(false);
+    expect(r).toEqual({ success: false, error: "Este link expirou." });
     expect(prisma.auditLog.create).not.toHaveBeenCalled();
     expect(prisma.notificacao.create).not.toHaveBeenCalled();
   });

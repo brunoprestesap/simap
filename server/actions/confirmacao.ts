@@ -51,7 +51,19 @@ async function concluirConfirmacao({
   });
 
   if (!confirmou) {
-    return { success: false, error: "Esta movimentação já foi confirmada ou expirou." };
+    // SELECT só no caminho de erro para diferenciar "já confirmada" de "link expirou".
+    // Mantém a UX original sem comprometer a atomicidade do happy path.
+    const atual = await prisma.movimentacao.findUnique({
+      where: { id: movimentacaoId },
+      select: { status: true, tokenExpiraEm: true },
+    });
+    if (!atual) {
+      return { success: false, error: "Movimentação não encontrada." };
+    }
+    if (atual.status !== "PENDENTE_CONFIRMACAO") {
+      return { success: false, error: "Esta movimentação já foi confirmada." };
+    }
+    return { success: false, error: "Este link expirou." };
   }
 
   // Notificação fora da transação: fire-and-forget, não bloqueia resposta.

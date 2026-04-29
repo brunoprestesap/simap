@@ -12,6 +12,7 @@ import {
 } from "@/lib/ldap";
 import { authLogger } from "@/lib/logger";
 import { consumeAttempt, resetAttempts } from "@/lib/rate-limit";
+import { revalidateJwtToken } from "@/lib/auth-jwt-callback";
 export { getHomeByPerfil } from "@/lib/profile-home";
 
 const LOGIN_RATE_LIMIT = {
@@ -47,11 +48,6 @@ declare module "@auth/core/jwt" {
   }
 }
 
-// Intervalo entre re-validações do usuário no banco (ativo / perfil) durante a vida do JWT.
-// Curto o suficiente para que desativação/troca de perfil tenha efeito sem aguardar expiração
-// completa do token; longo o suficiente para não bombardear o DB a cada request autenticado.
-const JWT_REVALIDATE_MS = 5 * 60_000;
-
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
   callbacks: {
@@ -59,39 +55,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     // Sobrescreve o jwt do authConfig (que é edge-compatible, sem Prisma) para revalidar
     // ativo/perfil no DB periodicamente. Roda apenas em runtime Node — o middleware continua
     // usando authConfig.jwt sem essa checagem (ok: invalidação ocorre no próximo hit server-side).
-    async jwt({ token, user, trigger }) {
-      if (user) {
-        token.id = user.id!;
-        token.matricula = (user as unknown as { matricula: string }).matricula;
-        token.nome = (user as unknown as { nome: string }).nome;
-        token.perfil = (user as unknown as { perfil: string }).perfil;
-        token.lastValidatedAt = Date.now();
-        return token;
-      }
-
-      const now = Date.now();
-      const since = token.lastValidatedAt ?? 0;
-      if (trigger !== "update" && now - since < JWT_REVALIDATE_MS) {
-        return token;
-      }
-
-      const u = await prisma.usuario.findUnique({
-        where: { id: token.id },
-        select: { ativo: true, perfil: true, nome: true },
+    jwt({ token, user, trigger }) {
+      return revalidateJwtToken({
+        token,
+        user: user ?? undefined,
+        trigger,
+        revalidate: (id) =>
+          prisma.usuario.findUnique({
+            where: { id },
+            select: { ativo: true, perfil: true, nome: true },
+          }),
+        onInvalidate: (matricula) =>
+          authLogger.info(
+            { matricula },
+            "sessão invalidada: usuário inativo ou removido",
+          ),
       });
-
-      if (!u || !u.ativo) {
-        authLogger.info(
-          { matricula: token.matricula },
-          "sessão invalidada: usuário inativo ou removido",
-        );
-        return null;
-      }
-
-      token.perfil = u.perfil;
-      token.nome = u.nome;
-      token.lastValidatedAt = now;
-      return token;
     },
   },
   providers: [
