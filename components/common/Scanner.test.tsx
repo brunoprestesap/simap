@@ -63,10 +63,13 @@ describe("Scanner", () => {
       .mockResolvedValue(undefined);
     const mockStop = vi.fn().mockResolvedValue(undefined);
 
-    vi.mocked(Html5Qrcode).mockImplementationOnce(() => ({
-      start: mockStart,
-      stop: mockStop,
-    }));
+    vi.mocked(Html5Qrcode).mockImplementationOnce(
+      () =>
+        ({
+          start: mockStart,
+          stop: mockStop,
+        }) as unknown as InstanceType<typeof Html5Qrcode>,
+    );
 
     const { unmount } = render(<Scanner onScan={vi.fn()} active />);
 

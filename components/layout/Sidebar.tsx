@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -48,13 +49,13 @@ export function Sidebar({ items, userName }: SidebarProps) {
     >
       {/* Logo */}
       <div className="flex items-center gap-2 px-4 h-16 border-b border-sidebar-border">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+        <Image
           src="/favicon-simap.svg"
           alt="SIMAP"
           width={32}
           height={32}
           className="shrink-0"
+          priority
         />
         {!collapsed && (
           <span className="text-lg font-bold tracking-tight">SIMAP</span>

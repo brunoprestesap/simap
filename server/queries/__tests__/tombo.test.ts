@@ -135,7 +135,7 @@ describe("buscarTomboParaMovimentacao", () => {
     vi.mocked(prisma.tombo.findFirst).mockResolvedValue({
       ...mockTomboBase,
       itensMovimentacao: [{ id: "im1" }],
-    } as Awaited<ReturnType<typeof prisma.tombo.findFirst>>);
+    } as unknown as Awaited<ReturnType<typeof prisma.tombo.findFirst>>);
 
     const r = await buscarTomboParaMovimentacao("100");
     expect(r).toEqual({ status: "em_movimentacao", codigo: "100" });
@@ -145,7 +145,7 @@ describe("buscarTomboParaMovimentacao", () => {
     vi.mocked(prisma.tombo.findFirst).mockResolvedValue({
       ...mockTomboBase,
       itensMovimentacao: [],
-    } as Awaited<ReturnType<typeof prisma.tombo.findFirst>>);
+    } as unknown as Awaited<ReturnType<typeof prisma.tombo.findFirst>>);
 
     const r = await buscarTomboParaMovimentacao("100");
     expect(r).toEqual({
@@ -168,7 +168,7 @@ describe("buscarTomboParaMovimentacao", () => {
       ...mockTomboBase,
       numero: "11706",
       itensMovimentacao: [],
-    } as Awaited<ReturnType<typeof prisma.tombo.findFirst>>);
+    } as unknown as Awaited<ReturnType<typeof prisma.tombo.findFirst>>);
 
     const r = await buscarTomboParaMovimentacao("011706");
 

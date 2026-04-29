@@ -1,5 +1,6 @@
 "use server";
 
+import type { Prisma } from "@/lib/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 
 export async function registrarAuditoria(
@@ -15,7 +16,9 @@ export async function registrarAuditoria(
       entidade,
       entidadeId,
       usuarioId,
-      detalhes: detalhes ? JSON.parse(JSON.stringify(detalhes)) : undefined,
+      // detalhes é sempre serializável (callers passam objetos planos com strings/números/arrays).
+      // Cast direto para InputJsonValue evita o JSON.parse(JSON.stringify) que existia antes.
+      detalhes: (detalhes ?? undefined) as Prisma.InputJsonValue | undefined,
     },
   });
 }

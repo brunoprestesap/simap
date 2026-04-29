@@ -7,6 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
@@ -14,6 +17,9 @@
     "deploy:prepare:vps": "bash deploy/prepare-vps.sh",
     "deploy:bootstrap:first": "bash scripts/bootstrap-first-deploy.sh",
     "postinstall": "prisma generate"
+  },
+  "engines": {
+    "node": ">=20.11"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

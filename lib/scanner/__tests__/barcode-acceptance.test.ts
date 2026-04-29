@@ -4,7 +4,7 @@ import {
   CONFIRM_WINDOW_MS,
   SCAN_COOLDOWN_MS,
 } from "../barcode-acceptance";
-import type { ScanBuffer } from "../barcode-acceptance";
+import type { ScanBuffer, LastAccepted } from "../barcode-acceptance";
 
 const empty: ScanBuffer = { code: "", count: 0, firstAt: 0 };
 const none: LastAccepted = { code: "", at: 0 };

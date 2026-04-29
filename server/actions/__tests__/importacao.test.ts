@@ -114,7 +114,7 @@ describe("importacao csv actions", () => {
     vi.mocked(parseCsvSicam).mockReturnValue({
       registros,
       erros: [],
-    } as ReturnType<typeof parseCsvSicam>);
+    } as unknown as ReturnType<typeof parseCsvSicam>);
 
     vi.mocked(prisma.unidade.findMany)
       .mockResolvedValueOnce([] as Awaited<ReturnType<typeof prisma.unidade.findMany>>)
@@ -194,7 +194,7 @@ describe("importacao csv actions", () => {
     vi.mocked(parseCsvSicam).mockReturnValue({
       registros,
       erros: [],
-    } as ReturnType<typeof parseCsvSicam>);
+    } as unknown as ReturnType<typeof parseCsvSicam>);
 
     vi.mocked(prisma.unidade.findMany)
       .mockResolvedValueOnce([] as Awaited<ReturnType<typeof prisma.unidade.findMany>>)
@@ -260,7 +260,7 @@ describe("importacao csv actions", () => {
     vi.mocked(parseCsvSicam).mockReturnValue({
       registros,
       erros: [],
-    } as ReturnType<typeof parseCsvSicam>);
+    } as unknown as ReturnType<typeof parseCsvSicam>);
 
     vi.mocked(prisma.unidade.findMany)
       .mockResolvedValueOnce([] as Awaited<ReturnType<typeof prisma.unidade.findMany>>)

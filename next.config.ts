@@ -16,6 +16,24 @@ const nextConfig: NextConfig = {
     },
   },
   async headers() {
+    // CSP relativamente fechada: SIMAP não usa scripts externos nem CDNs.
+    // 'unsafe-inline' em style-src é necessário para Tailwind/shadcn no momento;
+    // 'unsafe-eval' em script-src é exigido pelo Next em dev (HMR/turbopack).
+    const isDev = process.env.NODE_ENV !== "production";
+    const csp = [
+      "default-src 'self'",
+      `script-src 'self'${isDev ? " 'unsafe-eval' 'unsafe-inline'" : ""}`,
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: blob:",
+      "font-src 'self' data:",
+      "connect-src 'self'",
+      "media-src 'self' blob:",
+      "frame-ancestors 'self'",
+      "base-uri 'self'",
+      "form-action 'self'",
+      "object-src 'none'",
+    ].join("; ");
+
     return [
       {
         source: "/:path*",
@@ -26,6 +44,7 @@ const nextConfig: NextConfig = {
             key: "Referrer-Policy",
             value: "strict-origin-when-cross-origin",
           },
+          { key: "Content-Security-Policy", value: csp },
         ],
       },
     ];

@@ -72,7 +72,7 @@ describe("criarMovimentacao", () => {
         tomboId: "t1",
         tombo: { numero: "1001" },
       },
-    ] as Awaited<ReturnType<typeof prisma.itemMovimentacao.findMany>>);
+    ] as unknown as Awaited<ReturnType<typeof prisma.itemMovimentacao.findMany>>);
 
     const result = await criarMovimentacao({
       tomboIds: ["t1"],
@@ -107,7 +107,7 @@ describe("criarMovimentacao", () => {
       unidadeOrigem: { descricao: "Origem" },
       unidadeDestino: { descricao: "Destino" },
       itens: [{ tombo: { numero: "1001", descricaoMaterial: "Notebook" } }],
-    } as Awaited<ReturnType<typeof prisma.movimentacao.create>>);
+    } as unknown as Awaited<ReturnType<typeof prisma.movimentacao.create>>);
 
     vi.mocked(prisma.usuario.findMany).mockResolvedValue([
       { matricula: "AP20001" },

@@ -50,7 +50,9 @@ export function ConfirmacaoMovimentacao({
   useClickOutside(dropdownRef, useCallback(() => setShowDropdown(false), []));
 
   const unidadeOrigem = tombos[0]?.unidade ?? null;
-  const dataHoraRegistro = useMemo(() => formatDateTimeBR(new Date()), []);
+  // useState lazy init garante que formatDateTimeBR(new Date()) rode só no mount;
+  // useMemo([]) não evita o trabalho — só evita recriação se as deps mudassem.
+  const [dataHoraRegistro] = useState(() => formatDateTimeBR(new Date()));
 
   const setorOrigem = useMemo(() => {
     let primeiroSetor: SetorResumo | null = null;

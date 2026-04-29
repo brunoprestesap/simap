@@ -108,7 +108,7 @@ describe("registrarNoSicam", () => {
 
   it("deve registrar no SICAM e atualizar tombos no fluxo feliz", async () => {
     vi.mocked(prisma.movimentacao.findUnique).mockResolvedValue(
-      movimentacaoConfirmada as Awaited<
+      movimentacaoConfirmada as unknown as Awaited<
         ReturnType<typeof prisma.movimentacao.findUnique>
       >,
     );
@@ -142,7 +142,7 @@ describe("registrarNoSicam", () => {
 
   it("deve abortar com erro quando outra requisição já saiu de CONFIRMADA_ORIGEM (race no SICAM)", async () => {
     vi.mocked(prisma.movimentacao.findUnique).mockResolvedValue(
-      movimentacaoConfirmada as Awaited<
+      movimentacaoConfirmada as unknown as Awaited<
         ReturnType<typeof prisma.movimentacao.findUnique>
       >,
     );
@@ -166,7 +166,7 @@ describe("registrarNoSicam", () => {
 
   it("deve reverter movimentação quando tombo.updateMany falha (atomicidade da $transaction)", async () => {
     vi.mocked(prisma.movimentacao.findUnique).mockResolvedValue(
-      movimentacaoConfirmada as Awaited<
+      movimentacaoConfirmada as unknown as Awaited<
         ReturnType<typeof prisma.movimentacao.findUnique>
       >,
     );
