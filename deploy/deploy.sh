@@ -5,6 +5,7 @@ COMPOSE_FILE="deploy/docker-compose.prod.yml"
 APP_SERVICE="app"
 DB_SERVICE="db"
 PROXY_SERVICE="proxy"
+BACKUP_SERVICE="db-backup"
 
 require_env() {
   local var_name="$1"
@@ -58,6 +59,10 @@ docker compose -f "${COMPOSE_FILE}" up -d "${APP_SERVICE}"
 
 echo "Subindo proxy HTTPS..."
 docker compose -f "${COMPOSE_FILE}" up -d "${PROXY_SERVICE}"
+
+echo "Subindo servico de backup do banco..."
+mkdir -p deploy/backups
+docker compose -f "${COMPOSE_FILE}" up -d "${BACKUP_SERVICE}"
 
 echo "Validando status dos containers..."
 docker compose -f "${COMPOSE_FILE}" ps

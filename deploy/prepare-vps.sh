@@ -13,6 +13,7 @@ require_env VPS_PATH
 
 echo "Preparando diretorio base em ${VPS_PATH}..."
 mkdir -p "${VPS_PATH}/deploy"
+mkdir -p "${VPS_PATH}/deploy/backups"
 
 if ! command -v docker >/dev/null 2>&1; then
   echo "Docker nao encontrado na VPS." >&2
