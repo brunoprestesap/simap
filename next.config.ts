@@ -17,12 +17,16 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     // CSP relativamente fechada: SIMAP não usa scripts externos nem CDNs.
-    // 'unsafe-inline' em style-src é necessário para Tailwind/shadcn no momento;
-    // 'unsafe-eval' em script-src é exigido pelo Next em dev (HMR/turbopack).
+    // 'unsafe-inline' em style-src é necessário para Tailwind/shadcn.
+    // 'unsafe-inline' em script-src é exigido pelo Next.js em prod também (a hidratação
+    // injeta scripts inline com estado serializado e bootstrap do client). A alternativa
+    // ideal seria usar nonces via middleware (next/headers), mas isso requer refatoração
+    // mais ampla — fica como follow-up.
+    // 'unsafe-eval' adicional em dev por causa do Turbopack/HMR.
     const isDev = process.env.NODE_ENV !== "production";
     const csp = [
       "default-src 'self'",
-      `script-src 'self'${isDev ? " 'unsafe-eval' 'unsafe-inline'" : ""}`,
+      `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob:",
       "font-src 'self' data:",
