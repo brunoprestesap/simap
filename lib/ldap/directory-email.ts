@@ -6,6 +6,7 @@ import {
 } from "@/lib/ldap/config";
 import { createLdapClient } from "@/lib/ldap/client";
 import { pickMailFromEntry } from "@/lib/ldap/entry-attr";
+import { ldapLogger } from "@/lib/logger";
 
 /**
  * Obtém e-mail (mail ou userPrincipalName) no diretório para a matrícula.
@@ -24,9 +25,7 @@ export async function findDirectoryEmailByMatricula(
   try {
     filter = buildSearchFilter(ldapCfg.searchFilterTemplate, loginUser);
   } catch (e) {
-    if (process.env.NODE_ENV === "development") {
-      console.error("[LDAP] filtro e-mail:", e);
-    }
+    ldapLogger.error({ err: e }, "filtro e-mail inválido");
     return null;
   }
 
@@ -42,9 +41,7 @@ export async function findDirectoryEmailByMatricula(
     if (searchEntries.length !== 1) return null;
     return pickMailFromEntry(searchEntries[0]);
   } catch (err) {
-    if (process.env.NODE_ENV === "development") {
-      console.warn("[LDAP] falha ao buscar e-mail:", matricula, err);
-    }
+    ldapLogger.warn({ matricula, err }, "falha ao buscar e-mail");
     return null;
   } finally {
     await client.unbind().catch(() => {});

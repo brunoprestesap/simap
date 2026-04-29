@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import { emailLogger } from "@/lib/logger";
 
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST ?? "localhost",
@@ -30,8 +31,8 @@ export async function enviarEmail(
       subject: assunto,
       html,
     });
-    console.log(`[EMAIL] Enviado para ${para}: ${assunto}`);
+    emailLogger.info({ para, assunto }, "enviado");
   } catch (error) {
-    console.error(`[EMAIL] Erro ao enviar para ${para}:`, error);
+    emailLogger.error({ para, err: error }, "erro ao enviar");
   }
 }

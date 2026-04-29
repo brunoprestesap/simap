@@ -137,8 +137,80 @@ bash deploy/deploy.sh
 
 ## Checklist pós-deploy
 
-- `docker compose -f deploy/docker-compose.prod.yml ps` com `app` e `db` em estado saudável.
+- `docker compose -f deploy/docker-compose.prod.yml ps` com `app`, `db`, `proxy` e `db-backup` em estado saudável.
 - Aplicação acessível na URL institucional.
 - Login e rota principal respondendo normalmente.
+- `curl -k https://${APP_DOMAIN}/api/health` retorna `{"ok":true,"db":"up"}`.
 - Logs sem erro crítico:
   - `docker compose -f deploy/docker-compose.prod.yml logs app --tail 100`
+- Primeiro dump aparece em `deploy/backups/` em até 24h:
+  - `ls -lh deploy/backups/`
+
+## Backup e restore
+
+### Backup automático
+
+O serviço `db-backup` executa `pg_dump | gzip` periodicamente em `deploy/backups/simap_<TIMESTAMP>.sql.gz`. Cadência e retenção controladas por `BACKUP_INTERVAL_SECONDS` e `BACKUP_RETENTION_DAYS` no `.env`.
+
+Para forçar um backup imediato:
+
+```bash
+cd "$VPS_PATH"
+docker compose -f deploy/docker-compose.prod.yml exec db-backup \
+  sh -c 'pg_dump --no-owner --no-privileges | gzip > /backups/simap_manual_$(date +%Y%m%d_%H%M%S).sql.gz'
+```
+
+### Restore (validar periodicamente em ambiente de teste)
+
+```bash
+cd "$VPS_PATH"
+gunzip -c deploy/backups/simap_<TIMESTAMP>.sql.gz | \
+  docker compose -f deploy/docker-compose.prod.yml exec -T db \
+    psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}"
+```
+
+> Recomenda-se testar restore em staging a cada 90 dias para validar integridade dos dumps.
+
+## Renovação do certificado TLS interno
+
+Os certificados ficam em `deploy/certs/server.crt` e `deploy/certs/server.key` na VPS. A CA institucional emite com validade típica de 1-2 anos.
+
+### Verificar data de expiração
+
+```bash
+cd "$VPS_PATH"
+openssl x509 -in deploy/certs/server.crt -noout -enddate
+# Saída esperada: notAfter=<data>
+```
+
+### Renovar (rolagem sem downtime do app)
+
+1. Solicitar novo cert e chave para `APP_DOMAIN` à CA interna.
+2. Atualizar os GitHub Secrets `TLS_CERT_PEM` e `TLS_KEY_PEM` (o próximo deploy os recria na VPS).
+3. **OU** substituir manualmente na VPS sem aguardar deploy:
+
+```bash
+cd "$VPS_PATH"
+cp deploy/certs/server.crt deploy/certs/server.crt.bak
+cp deploy/certs/server.key deploy/certs/server.key.bak
+
+# Substituir pelos novos arquivos (copiar via scp, etc.)
+
+chmod 644 deploy/certs/server.crt
+chmod 600 deploy/certs/server.key
+
+# Reload do nginx sem derrubar conexões ativas
+docker compose -f deploy/docker-compose.prod.yml exec proxy nginx -t
+docker compose -f deploy/docker-compose.prod.yml exec proxy nginx -s reload
+```
+
+4. Validar:
+
+```bash
+echo | openssl s_client -servername "${APP_DOMAIN}" -connect "${APP_DOMAIN}":443 2>/dev/null | \
+  openssl x509 -noout -dates
+```
+
+### Lembrete operacional
+
+Recomenda-se cadastrar lembrete (calendário institucional ou monitoração) **30 dias antes** da expiração para iniciar o processo de renovação com folga.

@@ -10,6 +10,7 @@ import {
   isLdapConfigured,
   warnDevIfLdapDisabled,
 } from "@/lib/ldap";
+import { authLogger } from "@/lib/logger";
 export { getHomeByPerfil } from "@/lib/profile-home";
 
 declare module "next-auth" {
@@ -53,9 +54,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           const senha = credentials?.senha as string | undefined;
 
           if (!rawMatricula || !senha) {
-            if (process.env.NODE_ENV === "development") {
-              console.warn("[AUTH] authorize: matricula ou senha vazios");
-            }
+            authLogger.debug("authorize: matricula ou senha vazios");
             return null;
           }
 
@@ -79,12 +78,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
           if (!usuario) {
             if (!isLdapConfigured()) {
-              if (process.env.NODE_ENV === "development") {
-                console.warn(
-                  "[AUTH] sem LDAP: usuário deve existir na base (seed ou cadastro manual):",
-                  matricula,
-                );
-              }
+              authLogger.warn(
+                { matricula },
+                "sem LDAP: usuário deve existir na base (seed ou cadastro manual)",
+              );
               return null;
             }
 
@@ -100,13 +97,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                   ativo: true,
                 },
               });
-              if (process.env.NODE_ENV === "development") {
-                console.info(
-                  "[AUTH] Usuario provisionado no primeiro login:",
-                  matricula,
-                  perfil,
-                );
-              }
+              authLogger.info(
+                { matricula, perfil },
+                "usuario provisionado no primeiro login",
+              );
             } catch (e) {
               if (
                 e instanceof Prisma.PrismaClientKnownRequestError &&
@@ -116,7 +110,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                   where: { matricula },
                 });
               } else {
-                console.error("[AUTH] Erro ao provisionar usuario:", e);
+                authLogger.error({ err: e }, "erro ao provisionar usuario");
                 return null;
               }
             }
@@ -127,12 +121,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           }
 
           if (!usuario.ativo) {
-            if (process.env.NODE_ENV === "development") {
-              console.warn(
-                "[AUTH] authorize: usuário existe mas está inativo:",
-                matricula,
-              );
-            }
+            authLogger.warn({ matricula }, "usuário existe mas está inativo");
             return null;
           }
 
@@ -145,7 +134,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             perfil: usuario.perfil,
           };
         } catch (error) {
-          console.error("[AUTH] Erro no authorize:", error);
+          authLogger.error({ err: error }, "erro no authorize");
           return null;
         }
       },

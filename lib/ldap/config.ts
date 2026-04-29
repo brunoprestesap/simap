@@ -1,4 +1,5 @@
 import type { PerfilUsuario } from "@/lib/generated/prisma/client";
+import { ldapLogger } from "@/lib/logger";
 
 const PERFIS_VALIDOS: PerfilUsuario[] = [
   "TECNICO_TI",
@@ -20,8 +21,8 @@ export function warnDevIfLdapDisabled(): void {
     !warnedMissingLdapInDev
   ) {
     warnedMissingLdapInDev = true;
-    console.warn(
-      "[AUTH] LDAP_URL não definido — login aceita qualquer senha para usuários ativos no banco (apenas desenvolvimento).",
+    ldapLogger.warn(
+      "LDAP_URL não definido — login aceita qualquer senha para usuários ativos no banco (apenas desenvolvimento).",
     );
   }
 }
@@ -54,11 +55,9 @@ export function getLdapBindConfig(): {
     "(sAMAccountName={{username}})";
 
   if (!bindDn || !searchBase) {
-    if (process.env.NODE_ENV === "development") {
-      console.error(
-        "[LDAP] LDAP_URL definido mas faltam LDAP_BIND_DN ou LDAP_SEARCH_BASE",
-      );
-    }
+    ldapLogger.error(
+      "LDAP_URL definido mas faltam LDAP_BIND_DN ou LDAP_SEARCH_BASE",
+    );
     return null;
   }
 

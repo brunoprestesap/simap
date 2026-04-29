@@ -3,6 +3,7 @@ import { buildSearchFilter } from "@/lib/ldap/filter";
 import { getLdapBindConfig, normalizeUsernameForLdap } from "@/lib/ldap/config";
 import { createLdapClient } from "@/lib/ldap/client";
 import { pickDisplayNameFromEntry } from "@/lib/ldap/entry-attr";
+import { ldapLogger } from "@/lib/logger";
 
 export type LdapAuthenticateResult =
   | { ok: true; displayName: string | null }
@@ -23,9 +24,7 @@ export async function authenticateLdap(
   try {
     filter = buildSearchFilter(ldapCfg.searchFilterTemplate, loginUser);
   } catch (e) {
-    if (process.env.NODE_ENV === "development") {
-      console.error("[LDAP] filtro inválido:", e);
-    }
+    ldapLogger.error({ err: e }, "filtro inválido");
     return { ok: false };
   }
 
@@ -41,14 +40,10 @@ export async function authenticateLdap(
     });
 
     if (searchEntries.length !== 1) {
-      if (process.env.NODE_ENV === "development") {
-        console.warn(
-          "[LDAP] busca por matrícula não retornou exatamente uma entrada:",
-          loginUser,
-          "count=",
-          searchEntries.length,
-        );
-      }
+      ldapLogger.warn(
+        { loginUser, count: searchEntries.length },
+        "busca por matrícula não retornou exatamente uma entrada",
+      );
       return { ok: false };
     }
 
@@ -58,12 +53,10 @@ export async function authenticateLdap(
     await client.bind(userDn, password);
     return { ok: true, displayName };
   } catch (err) {
-    if (process.env.NODE_ENV === "development") {
-      if (err instanceof InvalidCredentialsError) {
-        console.warn("[LDAP] credenciais inválidas (bind usuário ou serviço)");
-      } else {
-        console.warn("[LDAP] erro na verificação:", err);
-      }
+    if (err instanceof InvalidCredentialsError) {
+      ldapLogger.info("credenciais inválidas (bind usuário ou serviço)");
+    } else {
+      ldapLogger.warn({ err }, "erro na verificação");
     }
     return { ok: false };
   } finally {

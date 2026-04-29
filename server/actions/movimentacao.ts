@@ -14,6 +14,7 @@ import {
   buscarUsuarioIdsPorMatriculas,
 } from "@/server/services/notificacao";
 import { formatDateTimeBR } from "@/lib/format";
+import { movimentacaoLogger } from "@/lib/logger";
 
 export async function criarMovimentacao(input: CriarMovimentacaoInput): Promise<{
   success: boolean;
@@ -167,7 +168,10 @@ export async function criarMovimentacao(input: CriarMovimentacaoInput): Promise<
       }
     })
     .catch((err) => {
-      console.error("[MOVIMENTACAO] Falha ao enviar e-mails de notificação:", err);
+      movimentacaoLogger.error(
+        { err },
+        "falha ao enviar e-mails de notificação",
+      );
     });
 
   // ─── Notificações ─────────────────────────────────────────
