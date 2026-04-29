@@ -93,15 +93,9 @@ export function ConfirmacaoMovimentacao({
   }, [unidadesIniciais, unidadeOrigem?.id, searchQuery]);
 
   useEffect(() => {
-    if (!unidadeDestinoId) {
-      setSetores([]);
-      setSetorDestinoId("");
-      return;
-    }
+    if (!unidadeDestinoId) return;
 
     let cancelled = false;
-    setSetorDestinoId("");
-    setError(null);
 
     listarSetoresPorUnidade(unidadeDestinoId)
       .then((data) => {
@@ -126,6 +120,9 @@ export function ConfirmacaoMovimentacao({
     setSearchQuery(`${unidade.codigo} — ${unidade.descricao}`);
     setShowDropdown(false);
     setError(null);
+    // Reset state derivado da unidade ao mudar de unidade
+    setSetores([]);
+    setSetorDestinoId("");
   }, []);
 
   const handleConfirm = async () => {

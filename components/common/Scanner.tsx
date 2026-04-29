@@ -30,7 +30,7 @@ interface ScannerInstance {
 
 export function Scanner({ onScan, onError, active = true }: ScannerProps) {
   const reactId = useId();
-  const containerIdRef = useRef(`scanner-reader-${reactId.replace(/:/g, "")}`);
+  const containerId = `scanner-reader-${reactId.replace(/:/g, "")}`;
 
   const onScanRef = useRef(onScan);
   const onErrorRef = useRef(onError);
@@ -85,7 +85,6 @@ export function Scanner({ onScan, onError, active = true }: ScannerProps) {
   // Torch toggle
   // --------------------------------------------------
   const toggleTorch = useCallback(async () => {
-    const containerId = containerIdRef.current;
     const videoEl = document.getElementById(containerId)?.querySelector("video");
     const stream = videoEl?.srcObject;
     if (!(stream instanceof MediaStream)) return;
@@ -102,7 +101,7 @@ export function Scanner({ onScan, onError, active = true }: ScannerProps) {
     } catch {
       // silently ignore — torch may have become unavailable
     }
-  }, [torchOn]);
+  }, [containerId, torchOn]);
 
   // --------------------------------------------------
   // Main camera + scanning loop
@@ -111,7 +110,6 @@ export function Scanner({ onScan, onError, active = true }: ScannerProps) {
     if (!active) return;
 
     let cancelled = false;
-    const containerId = containerIdRef.current;
 
     async function start() {
       // Dynamic import to avoid SSR issues (html5-qrcode accesses document at import time)
@@ -199,7 +197,7 @@ export function Scanner({ onScan, onError, active = true }: ScannerProps) {
       setHasTorch(false);
       setStatus("loading");
     };
-  }, [active, tryAccept]);
+  }, [active, containerId, tryAccept]);
 
   // --------------------------------------------------
   // Error state
@@ -228,7 +226,7 @@ export function Scanner({ onScan, onError, active = true }: ScannerProps) {
     <div className="relative h-full w-full overflow-hidden rounded-lg border border-border bg-black">
       {/* Container for html5-qrcode — library creates <video> inside */}
       <div
-        id={containerIdRef.current}
+        id={containerId}
         className="h-full w-full [&_video]:!h-full [&_video]:!w-full [&_video]:!object-cover [&_video]:!static [&>div]:!border-none [&_canvas]:!hidden [&>div>img]:!hidden"
       />
 
