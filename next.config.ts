@@ -43,12 +43,22 @@ const nextConfig: NextConfig = {
         source: "/:path*",
         headers: [
           { key: "X-Content-Type-Options", value: "nosniff" },
-          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          { key: "X-Frame-Options", value: "DENY" },
           {
             key: "Referrer-Policy",
             value: "strict-origin-when-cross-origin",
           },
           { key: "Content-Security-Policy", value: csp },
+          // HSTS só em produção — dev usa HTTP, e HSTS em HTTP não faz sentido.
+          // O nginx já envia HSTS; aqui é defesa em profundidade caso o nginx falte.
+          ...(!isDev
+            ? [
+                {
+                  key: "Strict-Transport-Security",
+                  value: "max-age=31536000; includeSubDomains",
+                },
+              ]
+            : []),
         ],
       },
     ];

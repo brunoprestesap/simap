@@ -6,6 +6,11 @@ import {
 import { requireAuthAction } from "@/lib/auth-guard";
 import { avaliarPermissaoConfirmacaoMovimentacao } from "@/lib/permissions/movimentacao-confirmacao";
 import { prisma } from "@/lib/prisma";
+import { consumeAttempt } from "@/lib/rate-limit";
+
+vi.mock("@/lib/rate-limit", () => ({
+  consumeAttempt: vi.fn(() => ({ allowed: true })),
+}));
 
 vi.mock("@/lib/auth-guard", () => ({
   requireAuthAction: vi.fn(),
@@ -118,6 +123,36 @@ describe("confirmarMovimentacaoLogada", () => {
     expect(result).toEqual({ success: true });
     expect(prisma.movimentacao.updateMany).toHaveBeenCalledTimes(1);
     expect(prisma.auditLog.create).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("confirmarMovimentacaoPublica — rate limit", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockTransactionAsTx();
+  });
+
+  it("deve retornar erro quando rate limit é atingido", async () => {
+    vi.mocked(consumeAttempt).mockReturnValueOnce({ allowed: false, retryAfterMs: 300_000 });
+
+    const result = await confirmarMovimentacaoPublica("token-rl", "João");
+
+    expect(result).toEqual({
+      success: false,
+      error: "Muitas tentativas. Tente novamente em alguns minutos.",
+    });
+    expect(prisma.movimentacao.findUnique).not.toHaveBeenCalled();
+    expect(prisma.movimentacao.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("deve prosseguir quando rate limit não foi atingido", async () => {
+    vi.mocked(consumeAttempt).mockReturnValueOnce({ allowed: true });
+    vi.mocked(prisma.movimentacao.findUnique).mockResolvedValue(null);
+
+    const result = await confirmarMovimentacaoPublica("token-ok", "João");
+
+    expect(consumeAttempt).toHaveBeenCalledWith("confirmar:token-ok", expect.objectContaining({ maxAttempts: 5 }));
+    expect(result).toEqual({ success: false, error: "Token inválido." });
   });
 });
 

@@ -21,6 +21,12 @@ const LOGIN_RATE_LIMIT = {
   lockoutMs: 10 * 60_000,
 } as const;
 
+const IP_LOGIN_RATE_LIMIT = {
+  windowMs: 15 * 60_000,
+  maxAttempts: 10,
+  lockoutMs: 15 * 60_000,
+} as const;
+
 declare module "next-auth" {
   interface Session {
     user: {
@@ -80,7 +86,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         matricula: { label: "Matrícula", type: "text" },
         senha: { label: "Senha", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, request) {
         try {
           const rawMatricula = credentials?.matricula as string | undefined;
           const senha = credentials?.senha as string | undefined;
@@ -93,6 +99,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           warnDevIfLdapDisabled();
 
           const matricula = rawMatricula.trim().toUpperCase();
+
+          const ip =
+            request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+            request.headers.get("x-real-ip") ??
+            "unknown";
+
+          const rlIp = consumeAttempt(`login:ip:${ip}`, IP_LOGIN_RATE_LIMIT);
+          if (!rlIp.allowed) {
+            authLogger.warn(
+              { ip, retryAfterMs: rlIp.retryAfterMs },
+              "login bloqueado por rate limit de IP",
+            );
+            return null;
+          }
 
           const rl = consumeAttempt(`login:${matricula}`, LOGIN_RATE_LIMIT);
           if (!rl.allowed) {

@@ -3,6 +3,13 @@
 import { requireAuthAction } from "@/lib/auth-guard";
 import { avaliarPermissaoConfirmacaoMovimentacao } from "@/lib/permissions/movimentacao-confirmacao";
 import { prisma } from "@/lib/prisma";
+import { consumeAttempt } from "@/lib/rate-limit";
+
+const CONFIRMACAO_RATE_LIMIT = {
+  windowMs: 5 * 60_000,
+  maxAttempts: 5,
+  lockoutMs: 5 * 60_000,
+} as const;
 
 interface ConcluirConfirmacaoArgs {
   movimentacaoId: string;
@@ -91,6 +98,11 @@ export async function confirmarMovimentacaoPublica(
   success: boolean;
   error?: string;
 }> {
+  const rl = consumeAttempt(`confirmar:${token}`, CONFIRMACAO_RATE_LIMIT);
+  if (!rl.allowed) {
+    return { success: false, error: "Muitas tentativas. Tente novamente em alguns minutos." };
+  }
+
   const movimentacao = await prisma.movimentacao.findUnique({
     where: { tokenConfirmacao: token },
     select: { id: true, tecnicoId: true },
