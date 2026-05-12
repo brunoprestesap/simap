@@ -1,7 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TOMBO_EM_MOVIMENTACAO_WHERE } from "@/lib/movimentacao-status";
 import { prisma } from "@/lib/prisma";
-import { buscarTomboDetalhe, buscarTomboParaMovimentacao, listarTombos } from "../tombo";
+import { buscarSnapshotSicam } from "@/server/queries/sicam";
+import {
+  buscarTomboDetalhe,
+  buscarTomboParaMovimentacao,
+  listarTombos,
+} from "../tombo";
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
@@ -13,6 +18,22 @@ vi.mock("@/lib/prisma", () => ({
     },
   },
 }));
+
+vi.mock("@/server/queries/sicam", () => ({
+  buscarSnapshotSicam: vi.fn(),
+}));
+
+const mockSicamIndisponivel = {
+  status: "indisponivel" as const,
+  consultadoEm: new Date("2026-05-12T12:00:00Z"),
+  errorMessage: "mock",
+  oraCode: null,
+};
+
+beforeEach(() => {
+  // Default: SICAM indisponível — testes que precisam de dados sobrescrevem.
+  vi.mocked(buscarSnapshotSicam).mockResolvedValue(mockSicamIndisponivel);
+});
 
 const mockTomboBase = {
   id: "t1",
@@ -127,7 +148,8 @@ describe("buscarTomboParaMovimentacao", () => {
     vi.mocked(prisma.tombo.findFirst).mockResolvedValue(null);
 
     const r = await buscarTomboParaMovimentacao("999999");
-    expect(r).toEqual({ status: "nao_encontrado", codigo: "999999" });
+    expect(r).toMatchObject({ status: "nao_encontrado", codigo: "999999" });
+    expect(r.sicamSnapshot?.status).toBe("indisponivel");
     expect(prisma.tombo.findFirst).toHaveBeenCalledTimes(1);
   });
 
@@ -138,7 +160,7 @@ describe("buscarTomboParaMovimentacao", () => {
     } as unknown as Awaited<ReturnType<typeof prisma.tombo.findFirst>>);
 
     const r = await buscarTomboParaMovimentacao("100");
-    expect(r).toEqual({ status: "em_movimentacao", codigo: "100" });
+    expect(r).toMatchObject({ status: "em_movimentacao", codigo: "100" });
   });
 
   it("retorna disponivel com tombo mapeado quando não há movimentação pendente", async () => {
@@ -148,7 +170,7 @@ describe("buscarTomboParaMovimentacao", () => {
     } as unknown as Awaited<ReturnType<typeof prisma.tombo.findFirst>>);
 
     const r = await buscarTomboParaMovimentacao("100");
-    expect(r).toEqual({
+    expect(r).toMatchObject({
       status: "disponivel",
       tombo: {
         id: "t1",
@@ -161,6 +183,82 @@ describe("buscarTomboParaMovimentacao", () => {
         nomeResponsavel: null,
       },
     });
+  });
+
+  it("consulta SICAM em paralelo com o lookup local (graceful degradation)", async () => {
+    vi.mocked(prisma.tombo.findFirst).mockResolvedValue({
+      ...mockTomboBase,
+      itensMovimentacao: [],
+    } as unknown as Awaited<ReturnType<typeof prisma.tombo.findFirst>>);
+
+    const r = await buscarTomboParaMovimentacao("100");
+
+    expect(buscarSnapshotSicam).toHaveBeenCalledWith(
+      "100",
+      expect.objectContaining({ timeoutMs: expect.any(Number) }),
+    );
+    expect(r.sicamSnapshot).toBeDefined();
+  });
+
+  it("recalcula divergencias contra o tombo local quando SICAM retorna dados", async () => {
+    vi.mocked(prisma.tombo.findFirst).mockResolvedValue({
+      ...mockTomboBase,
+      itensMovimentacao: [],
+    } as unknown as Awaited<ReturnType<typeof prisma.tombo.findFirst>>);
+
+    vi.mocked(buscarSnapshotSicam).mockResolvedValue({
+      status: "ok",
+      consultadoEm: new Date("2026-05-12T12:00:00Z"),
+      dados: {
+        numero: "100",
+        descricaoMaterial: "Notebook",
+        tipoTombo: "T",
+        codigoFornecedor: null,
+        nomeFornecedor: null,
+        nuTermo: null,
+        anTermo: null,
+        tiTermo: null,
+        codLotacao: 999,
+        codSetor: 8,
+        nomeSetor: "Outro",
+        matriculaResponsavel: "AP99",
+        dataTermo: null,
+        termoAssinado: true,
+      },
+      divergencias: [],
+    });
+
+    const r = await buscarTomboParaMovimentacao("100");
+
+    expect(r.sicamSnapshot?.status).toBe("ok");
+    // local.unidade.codigo = "NTI", sicam.codLotacao = 999 → divergente
+    expect(r.sicamSnapshot?.divergencias).toContain("unidade");
+    // local.setor.codigo = "SEC", sicam.codSetor = 8 → divergente
+    expect(r.sicamSnapshot?.divergencias).toContain("setor");
+    // local responsavel.matricula = "AP1", sicam = "AP99" → divergente
+    expect(r.sicamSnapshot?.divergencias).toContain("responsavel");
+    // local desc = "Notebook", sicam = "Notebook" → não divergente
+    expect(r.sicamSnapshot?.divergencias).not.toContain("descricao");
+  });
+
+  it("preserva indisponivel do SICAM sem afetar o resultado local", async () => {
+    vi.mocked(prisma.tombo.findFirst).mockResolvedValue({
+      ...mockTomboBase,
+      itensMovimentacao: [],
+    } as unknown as Awaited<ReturnType<typeof prisma.tombo.findFirst>>);
+
+    vi.mocked(buscarSnapshotSicam).mockResolvedValue({
+      status: "indisponivel",
+      consultadoEm: new Date("2026-05-12T12:00:00Z"),
+      errorMessage: "ORA-12541: TNS:no listener",
+      oraCode: 12541,
+    });
+
+    const r = await buscarTomboParaMovimentacao("100");
+
+    expect(r.status).toBe("disponivel");
+    expect(r.sicamSnapshot?.status).toBe("indisponivel");
+    expect(r.sicamSnapshot?.oraCode).toBe(12541);
   });
 
   it("inclui número sem zeros à esquerda na lista de candidatos (lookup único)", async () => {
@@ -192,7 +290,7 @@ describe("buscarTomboParaMovimentacao", () => {
       where: { numero: { in: ["000"] } },
       include: expect.any(Object),
     });
-    expect(r).toEqual({ status: "nao_encontrado", codigo: "000" });
+    expect(r).toMatchObject({ status: "nao_encontrado", codigo: "000" });
   });
 });
 

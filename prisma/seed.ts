@@ -14,6 +14,7 @@ async function main() {
   await prisma.itemMovimentacao.deleteMany();
   await prisma.movimentacao.deleteMany();
   await prisma.tombo.deleteMany();
+  await prisma.sincronizacaoSicam.deleteMany();
   await prisma.usuario.deleteMany();
   await prisma.setor.deleteMany();
   await prisma.unidade.deleteMany();

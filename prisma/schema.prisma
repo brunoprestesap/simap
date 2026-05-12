@@ -31,6 +31,12 @@ enum TipoNotificacao {
   IMPORTACAO_CSV
 }
 
+enum StatusSincronizacaoSicam {
+  EM_ANDAMENTO
+  CONCLUIDA
+  ERRO
+}
+
 // ─── Tabelas ─────────────────────────────────────────────
 
 model Unidade {
@@ -86,7 +92,8 @@ model Tombo {
   unidade              Unidade? @relation(fields: [unidadeId], references: [id])
   setor                Setor?   @relation(fields: [setorId], references: [id])
   usuarioResponsavel   Usuario? @relation("TomboUsuarioResponsavel", fields: [usuarioResponsavelId], references: [id], onDelete: SetNull)
-  itensMovimentacao     ItemMovimentacao[]
+  itensMovimentacao    ItemMovimentacao[]
+  historicosTermo      HistoricoTermoSicam[]
 
   @@index([numero])
   @@index([unidadeId])
@@ -116,6 +123,7 @@ model Usuario {
   auditLogs              AuditLog[]
   notificacoes           Notificacao[]
   importacoesCSV         ImportacaoCSV[]
+  sincronizacoesSicam    SincronizacaoSicam[]
 
   @@index([matricula])
   @@index([unidadeId])
@@ -226,4 +234,48 @@ model ImportacaoCSV {
 
   @@index([importadoPorId])
   @@index([createdAt])
+}
+
+model SincronizacaoSicam {
+  id               String                   @id @default(cuid())
+  status           StatusSincronizacaoSicam @default(EM_ANDAMENTO)
+  totalProcessados Int                      @default(0)
+  novos            Int                      @default(0)
+  atualizados      Int                      @default(0)
+  erros            Int                      @default(0)
+  mensagemErro     String?
+  finalizadoEm     DateTime?
+  iniciadoPorId    String
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+
+  iniciadoPor Usuario @relation(fields: [iniciadoPorId], references: [id])
+
+  @@index([iniciadoPorId])
+  @@index([createdAt])
+  @@index([status])
+}
+
+// Histórico de termos de responsabilidade de tombos sincronizado do SICAM Oracle.
+// Fonte: HISTORICO_TOMBO WHERE TIPO_OPERACAO='E' JOIN TERMO.
+// Cada linha é um estado histórico (TERMO anterior) de um tombo.
+model HistoricoTermoSicam {
+  id            String    @id @default(cuid())
+  tomboId       String
+  tombo         Tombo     @relation(fields: [tomboId], references: [id], onDelete: Cascade)
+
+  nuTermo       Int       // HISTORICO_TOMBO.NU_TERMO
+  anTermo       Int       // HISTORICO_TOMBO.AN_TERMO
+  tiTermo       Int       // HISTORICO_TOMBO.TI_TERMO
+  dtTermo       DateTime? // TERMO.DT_TERMO
+  codLotacao    Int?      // TERMO.CO_LOTA
+  codSetor      Int?      // TERMO.CO_SETOR
+  nomeSetor     String?   // PATRIMONIO_SETOR.NO_SETOR
+  matriculaResp String?   // TERMO.NU_MATR_RESP_TOMBO
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([tomboId, nuTermo, anTermo, tiTermo])
+  @@index([tomboId])
 }

@@ -11,7 +11,7 @@ import { useAdminCrud } from "@/lib/hooks/use-admin-crud";
 import { useAdminForm } from "@/lib/hooks/use-admin-form";
 import { listarUnidadesAdmin } from "@/server/queries/admin";
 import { criarUnidade, editarUnidade, desativarUnidade } from "@/server/actions/admin";
-import { Pencil, Ban } from "lucide-react";
+import { Pencil, Ban, AlertCircle } from "lucide-react";
 
 type Unidade = Awaited<ReturnType<typeof listarUnidadesAdmin>>[number];
 
@@ -60,7 +60,20 @@ export function UnidadesAdmin() {
         emptyMessage="Nenhuma unidade encontrada."
         columns={[
           { header: "Código", accessor: (u) => <span className="font-mono">{u.codigo}</span> },
-          { header: "Descrição", accessor: (u) => u.descricao },
+          {
+            header: "Descrição",
+            accessor: (u) => (
+              <span className="flex items-center gap-1.5">
+                {u.descricao}
+                {u.descricao === u.codigo && (
+                  <AlertCircle
+                    className="h-3.5 w-3.5 shrink-0 text-amber-500"
+                    aria-label="Sem descrição — clique em editar"
+                  />
+                )}
+              </span>
+            ),
+          },
           { header: "Status", accessor: (u) => <ActiveBadge ativo={u.ativo} activeLabel="Ativa" inactiveLabel="Inativa" /> },
           { header: "Setores", accessor: (u) => u._count.setores, className: "text-center" },
           {

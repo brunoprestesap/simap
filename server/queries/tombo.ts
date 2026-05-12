@@ -7,8 +7,15 @@ import {
 import type {
   BuscarTomboMovimentacaoResult,
   TomboSelecionado,
+  TomboSicamSnapshot,
 } from "@/lib/movimentacao-types";
 import { prisma } from "@/lib/prisma";
+import { buscarSnapshotSicam } from "@/server/queries/sicam";
+
+// Timeout curto para o lookup de SICAM no fluxo de scan: queremos enriquecer
+// a resposta com dados real-time, mas não bloquear o técnico se o Oracle estiver
+// lento. Detalhe do tombo (não-scan) pode usar timeout maior.
+const SCAN_SICAM_TIMEOUT_MS = 2000;
 
 interface TomboFilters {
   busca?: string;
@@ -153,31 +160,109 @@ export async function buscarTomboParaMovimentacao(
       ? [numero, numeroSemZeros]
       : [numero];
 
-  // Uma única query cobre o lookup direto e o fallback sem zeros à esquerda
-  // (entrada típica do leitor de código de barras vs. cadastro com padding).
-  const tombo = await prisma.tombo.findFirst({
-    where: { numero: { in: candidatos } },
-    include: tomboMovimentacaoInclude,
-  });
+  // Local + SICAM em paralelo. Se SICAM ficar indisponível, a Promise resolve
+  // com status "indisponivel" (não lança), então o resultado local não é
+  // bloqueado pela degradação do Oracle.
+  const [tombo, sicamSnapshot] = await Promise.all([
+    prisma.tombo.findFirst({
+      where: { numero: { in: candidatos } },
+      include: tomboMovimentacaoInclude,
+    }),
+    buscarSnapshotSicam(numeroSemZeros.length > 0 ? numeroSemZeros : numero, {
+      timeoutMs: SCAN_SICAM_TIMEOUT_MS,
+    }),
+  ]);
 
   if (!tombo) {
     return {
       status: "nao_encontrado",
       codigo: numero,
+      sicamSnapshot: toUiSnapshot(sicamSnapshot),
     };
   }
+
+  // Recalcula divergências comparando agora com os dados reais do tombo local —
+  // a chamada paralela acima não conhecia o tombo local ainda.
+  const enrichedSnapshot =
+    sicamSnapshot.status === "ok" && sicamSnapshot.dados
+      ? {
+          ...sicamSnapshot,
+          divergencias: computeDivergencias(tombo, sicamSnapshot.dados),
+        }
+      : sicamSnapshot;
 
   if (tombo.itensMovimentacao.length > 0) {
     return {
       status: "em_movimentacao",
       codigo: numero,
+      sicamSnapshot: toUiSnapshot(enrichedSnapshot),
     };
   }
 
   return {
     status: "disponivel",
     tombo: mapTomboSelecionado(tombo),
+    sicamSnapshot: toUiSnapshot(enrichedSnapshot),
   };
+}
+
+/**
+ * Adapta o resultado do servidor (`SnapshotSicamResult`) para o formato
+ * exposto à UI (`TomboSicamSnapshot`). Os tipos são compatíveis mas
+ * declarados em módulos diferentes pra não vazar imports server-only.
+ */
+function toUiSnapshot(
+  snapshot: Awaited<ReturnType<typeof buscarSnapshotSicam>>,
+): TomboSicamSnapshot {
+  return {
+    status: snapshot.status,
+    consultadoEm: snapshot.consultadoEm,
+    errorMessage: snapshot.errorMessage,
+    oraCode: snapshot.oraCode,
+    dados: snapshot.dados,
+    divergencias: snapshot.divergencias,
+  };
+}
+
+function computeDivergencias(
+  local: {
+    descricaoMaterial: string;
+    unidade?: { codigo: string } | null;
+    setor?: { codigo?: string | null; nome?: string } | null;
+    usuarioResponsavel?: { matricula: string } | null;
+    matriculaResponsavel?: string | null;
+  },
+  sicam: {
+    descricaoMaterial: string;
+    codLotacao: number | null;
+    codSetor: number | null;
+    matriculaResponsavel: string | null;
+  },
+): Array<"unidade" | "setor" | "responsavel" | "descricao"> {
+  const divergencias: Array<"unidade" | "setor" | "responsavel" | "descricao"> =
+    [];
+
+  if (sicam.codLotacao !== null && local.unidade) {
+    if (String(sicam.codLotacao) !== local.unidade.codigo) {
+      divergencias.push("unidade");
+    }
+  }
+  if (sicam.codSetor !== null && local.setor?.codigo) {
+    if (String(sicam.codSetor) !== local.setor.codigo) {
+      divergencias.push("setor");
+    }
+  }
+  if (sicam.matriculaResponsavel) {
+    const localMat =
+      local.usuarioResponsavel?.matricula ?? local.matriculaResponsavel ?? null;
+    if (localMat && localMat !== sicam.matriculaResponsavel) {
+      divergencias.push("responsavel");
+    }
+  }
+  if (local.descricaoMaterial.trim() !== sicam.descricaoMaterial.trim()) {
+    divergencias.push("descricao");
+  }
+  return divergencias;
 }
 
 export async function buscarTomboDetalhe(id: string) {
@@ -202,6 +287,10 @@ export async function buscarTomboDetalhe(id: string) {
             },
           },
         },
+      },
+      historicosTermo: {
+        orderBy: { dtTermo: "desc" },
+        take: 20,
       },
     },
   });

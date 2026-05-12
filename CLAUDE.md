@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What is this
 
-PATRIMOVE (SIMAP) — mobile-first web app for the Justiça Federal do Amapá (JFAP) to track asset movements between organizational units. Bridges the communication gap between IT (who physically moves equipment) and SEMAP (who registers in the legacy SICAM system).
+PATRIMOVE (SIMAP) — mobile-first web app for the Justiça Federal do Amapá (JFAP) to track asset movements between organizational units. Bridges the communication gap between IT (who physically moves equipment) and SEMAP (who registers in the legacy SICAM system). Asset data is sourced primarily via **direct Oracle integration with SICAM** (sync panel in `/admin/sicam`); CSV import remains available as a **contingency fallback** only.
 
 ## Commands
 
@@ -56,7 +56,8 @@ docker compose up -d     # Start PostgreSQL (port 5432, user/pass/db: simap)
 - **AuditLog is immutable** — INSERT only, never UPDATE or DELETE. No `onDelete: Cascade` on AuditLog relations.
 - **Validate all inputs with Zod** on both client and server.
 - **Server Actions return result objects** `{ success: boolean, data?: T, error?: string }` — never throw for expected errors.
-- **CSV from SICAM** uses Latin-1 encoding and `;` delimiter. Parser must handle this explicitly.
+- **SICAM Oracle sync** is the primary channel for loading asset data (`lib/sicam-oracle/`, admin panel `/admin/sicam`). **CSV import is a contingency fallback** — communicate this to SEMAP/operations: CSV should only be used when Oracle connectivity is unavailable.
+- **CSV from SICAM** (contingency) uses Latin-1 encoding and `;` delimiter. Parser must handle this explicitly.
 - **Email sending is fire-and-forget** — never block the user response. Log errors.
 - **Confirmation tokens** generated with `crypto.randomUUID()`, expiry via `TOKEN_EXPIRY_DAYS` env var.
 - **Server-side pagination** for all listings (20-50 items). Virtualize lists > 100 items.
@@ -80,9 +81,9 @@ docker compose up -d     # Start PostgreSQL (port 5432, user/pass/db: simap)
 
 ## Delivery waves
 
-- **Onda 1 (Core):** Auth, CSV import, scanner, movement registration, email notifications, public confirmation, audit
-- **Onda 2 (Operational):** SEMAP backlog, SICAM registration, "my assets" view, admin CRUD, in-app notifications, history
-- **Onda 3 (Managerial):** Dashboard KPIs, Recharts charts, audit reports, CSV import history
+- **Onda 1 (Core):** Auth, CSV import (now contingency fallback), scanner, movement registration, email notifications, public confirmation, audit
+- **Onda 2 (Operational):** SEMAP backlog, SICAM registration, "my assets" view, admin CRUD, in-app notifications, history; **SICAM Oracle sync (Fase 1 concluída 2026-05-12)** replaces CSV as primary data source
+- **Onda 3 (Managerial):** Dashboard KPIs, Recharts charts, audit reports, sync history
 
 ## Detailed docs
 

@@ -1,0 +1,19 @@
+# SIMAP — configuração isolada do Oracle Client
+#
+# Este sqlnet.ora é carregado pelo node-oracledb em Thick mode quando
+# SICAM_ORACLE_CONFIG_DIR aponta para este diretório (ver lib/sicam-oracle/client.ts).
+#
+# Propósito: garantir que o SIMAP não dependa do TNS_ADMIN global do sistema
+# (que pode estar configurado para outras aplicações com wallets, SSL, etc.)
+# e que aceite o formato Easy Connect "host:porta/servicename".
+
+# EZCONNECT primeiro: prioriza host:port/service (formato da SICAM_ORACLE_CONNECT_STRING).
+# TNSNAMES como fallback caso alguém um dia defina aliases em tnsnames.ora aqui.
+NAMES.DIRECTORY_PATH=(EZCONNECT,TNSNAMES)
+
+# Timeout de leitura de pacotes do servidor (segundos). Evita travas indefinidas
+# quando o Oracle do SICAM fica lento.
+SQLNET.RECV_TIMEOUT=30
+
+# Timeout de envio (segundos).
+SQLNET.SEND_TIMEOUT=30

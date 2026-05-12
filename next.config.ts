@@ -9,7 +9,7 @@ const allowedDevOrigins = process.env.ALLOWED_DEV_ORIGINS
 const nextConfig: NextConfig = {
   output: "standalone",
   allowedDevOrigins,
-  serverExternalPackages: ["pg", "@prisma/adapter-pg"],
+  serverExternalPackages: ["pg", "@prisma/adapter-pg", "oracledb"],
   experimental: {
     serverActions: {
       bodySizeLimit: "10mb",

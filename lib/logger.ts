@@ -31,3 +31,4 @@ export const authLogger = logger.child({ module: "auth" });
 export const ldapLogger = logger.child({ module: "ldap" });
 export const emailLogger = logger.child({ module: "email" });
 export const movimentacaoLogger = logger.child({ module: "movimentacao" });
+export const sicamOracleLogger = logger.child({ module: "sicam-oracle" });

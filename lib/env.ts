@@ -54,6 +54,19 @@ const envSchema = z.object({
     ])
     .optional(),
 
+  // SICAM Oracle (integração de leitura com o banco legado SICAM)
+  SICAM_ORACLE_USER: z.string().optional(),
+  SICAM_ORACLE_PASSWORD: z.string().optional(),
+  SICAM_ORACLE_CONNECT_STRING: z.string().optional(),
+  SICAM_ORACLE_POOL_MIN: z.coerce.number().int().min(0).optional(),
+  SICAM_ORACLE_POOL_MAX: z.coerce.number().int().positive().optional(),
+  SICAM_ORACLE_POOL_INCREMENT: z.coerce.number().int().positive().optional(),
+  SICAM_ORACLE_POOL_TIMEOUT: z.coerce.number().int().min(0).optional(),
+  SICAM_ORACLE_QUERY_TIMEOUT_MS: z.coerce.number().int().positive().optional(),
+  SICAM_ORACLE_SCHEMA_OWNER: z.string().optional(),
+  SICAM_ORACLE_INSTANT_CLIENT_DIR: z.string().optional(),
+  SICAM_ORACLE_CONFIG_DIR: z.string().optional(),
+
   // Postgres / Backup
   POSTGRES_USER: z.string().optional(),
   POSTGRES_PASSWORD: z.string().optional(),

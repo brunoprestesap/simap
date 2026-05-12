@@ -6,6 +6,7 @@ const adminTabs = [
   { label: "Setores", href: "/admin/setores" },
   { label: "Responsáveis", href: "/admin/responsaveis" },
   { label: "Perfis", href: "/admin/perfis" },
+  { label: "SICAM", href: "/admin/sicam" },
 ];
 
 export default async function AdminLayout({

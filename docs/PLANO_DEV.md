@@ -12,7 +12,7 @@ Construir, testar e implantar o PATRIMOVE em produção para todas as 50+ unidad
 
 1. Todas as funcionalidades das 3 ondas implementadas e testadas
 2. Testes automatizados com cobertura ≥ 80% nos fluxos críticos
-3. Importação CSV processando ~12.000 registros corretamente
+3. Sincronização SICAM Oracle como canal primário (Fase 1 concluída 2026-05-12); importação CSV disponível como fallback de contingência
 4. Scanner Code 128 funcionando em Chrome/Safari (Android/iOS)
 5. Autenticação LDAP/AD integrada
 6. E-mails via SMTP funcional
@@ -67,7 +67,7 @@ Construir, testar e implantar o PATRIMOVE em produção para todas as 50+ unidad
 | # | Tarefa | Dependência |
 |---|--------|------------|
 | 1.1 | Autenticação LDAP/AD com NextAuth v5 | 0.4 |
-| 1.2 | Importação CSV do SICAM (3 etapas) | 1.1 |
+| 1.2 | Importação CSV do SICAM (3 etapas) — **fallback de contingência**; canal primário substituído por SICAM Oracle sync (ver Onda 2) | 1.1 |
 | 1.3 | Scanner Code 128 + input manual | 1.1, 1.2 |
 | 1.4 | Registro de movimentação (seleção destino, confirmação) | 1.3 |
 | 1.5 | Envio de e-mails SMTP (templates origem + destino) | 1.4 |
@@ -82,6 +82,7 @@ Construir, testar e implantar o PATRIMOVE em produção para todas as 50+ unidad
 |---|--------|------------|
 | 2.1 | Backlog SEMAP (filtros, ordenação, paginação) | Onda 1 |
 | 2.2 | Formulário registro SICAM (protocolo, data, obs.) | 2.1 |
+| 2.2a | **SICAM Oracle sync — Fase 1 (CONCLUÍDA 2026-05-12):** infra Oracle (`lib/sicam-oracle/`), painel admin (`/admin/sicam`), sincronização manual e agendada de tombos | 2.4 |
 | 2.3 | Meus Patrimônios (busca, filtros) | Onda 1 |
 | 2.4 | CRUD Admin: Unidades e Setores | Onda 1 |
 | 2.5 | CRUD Admin: Servidores Responsáveis | 2.4 |
@@ -98,7 +99,7 @@ Construir, testar e implantar o PATRIMOVE em produção para todas as 50+ unidad
 | 3.2 | Dashboard: gráfico movimentações/período (Recharts) | 3.1 |
 | 3.3 | Dashboard: visão por unidade | 3.1 |
 | 3.4 | Dashboard: tabela relatórios de auditoria | 3.1 |
-| 3.5 | Histórico de importações CSV | Onda 2 |
+| 3.5 | Histórico de sincronizações SICAM Oracle (+ importações CSV legado) | Onda 2 |
 | 3.6 | Testes Onda 3 | 3.1-3.5 |
 
 ### Fase Final — Testes, Hardening & Deploy
@@ -109,7 +110,7 @@ Construir, testar e implantar o PATRIMOVE em produção para todas as 50+ unidad
 | F.2 | Compatibilidade mobile (Chrome Android + Safari iOS) | Onda 3 |
 | F.3 | Integração LDAP/AD com usuários reais | Onda 3 |
 | F.4 | Envio de e-mail com SMTP real | Onda 3 |
-| F.5 | Importação CSV real (~12.000 tombos) | F.1 |
+| F.5 | Validar sincronização SICAM Oracle em produção (~12.000 tombos); testar fallback CSV | F.1 |
 | F.6 | Hardening segurança (headers, rate limiting, tokens, HTTPS) | F.1 |
 | F.7 | Backup automatizado (pg_dump cron diário) | F.1 |
 | F.8 | Deploy produção na VPS (Docker + Nginx/HTTPS) | F.1-F.7 |
@@ -124,7 +125,8 @@ Construir, testar e implantar o PATRIMOVE em produção para todas as 50+ unidad
 | # | Fluxo | Onda |
 |---|-------|------|
 | E2E-01 | Login LDAP → redirecionamento por perfil | 1 |
-| E2E-02 | Importação CSV completa (3 etapas) | 1 |
+| E2E-02 | Importação CSV completa (3 etapas) — fluxo de contingência | 1 |
+| E2E-02a | Sincronização SICAM Oracle: acionar sync manual, aguardar conclusão, verificar tombos atualizados | 2 |
 | E2E-03 | Nova movimentação: scanner → destino → confirmação | 1 |
 | E2E-04 | Confirmação pública via token | 1 |
 | E2E-05 | Backlog SEMAP → registro no SICAM | 2 |
@@ -151,7 +153,7 @@ Construir, testar e implantar o PATRIMOVE em produção para todas as 50+ unidad
 |-------|-------|---------|-----------|
 | Scanner não funciona em dispositivos específicos | Média | Alto | Input manual obrigatório; testes em dispositivos reais |
 | LDAP/AD indisponível ou config diferente | Baixa | Alto | Testar cedo (1.1); fallback para dev local |
-| CSV muda formato sem aviso | Média | Médio | Parser robusto; validação de headers; pré-visualização |
+| CSV muda formato sem aviso | Baixa | Baixo | **Risco mitigado**: CSV é agora fallback de contingência; canal primário é SICAM Oracle. Parser mantido robusto para uso eventual |
 | Baixa adoção pelos técnicos | Média | Alto | Comunicação institucional; interface intuitiva |
 | Responsáveis não confirmam (ignoram e-mail) | Média | Médio | Prazo + flag "Não confirmada"; notificações in-app |
 | Performance com 12.000 tombos | Baixa | Médio | Índices; paginação; virtualização; teste de carga |
@@ -166,7 +168,7 @@ Construir, testar e implantar o PATRIMOVE em produção para todas as 50+ unidad
 |---|---------|------|-------------|
 | QA-01 | Prazo para confirmação da origem | 1 | 5 dias úteis; segue com "Não confirmada" |
 | QA-02 | Validade dos tokens | 1 | 7 dias |
-| QA-03 | CSV: upsert ou substituição | 1 | Upsert por Nº Tombo |
+| QA-03 | CSV: upsert ou substituição | 1 | ~~Upsert por Nº Tombo~~ — **RESOLVIDO**; canal primário migrado para SICAM Oracle sync; CSV mantido como contingência com upsert |
 | QA-04 | Tombos baixados no SICAM | 2 | Marcar "Baixado" sem excluir |
 
 ---
@@ -178,6 +180,6 @@ Construir, testar e implantar o PATRIMOVE em produção para todas as 50+ unidad
 | Fase 2 | Relatórios PDF | Demanda do gestor |
 | Fase 2 | Inventário físico com código de barras | Base consolidada |
 | Fase 2 | Ambiente de homologação | Frequência de deploys |
-| Fase 3 | Integração SICAM via API | TRF1 disponibilizar |
+| ~~Fase 3~~ | ~~Integração SICAM via API~~ | **CONCLUÍDA (Fase 1 — Oracle, 2026-05-12)**. Integração direta via Oracle (`lib/sicam-oracle/`); painel admin `/admin/sicam`. Fases 2–4 (escrita bidirecional, histórico completo) dependem de acesso ampliado ao Oracle |
 | Futura | Modo offline | Demanda em locais sem rede |
 | Futura | PWA / App nativo | Limitações do navegador |
