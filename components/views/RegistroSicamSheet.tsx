@@ -38,7 +38,6 @@ export function RegistroSicamSheet({ movimentacao, onClose, onSuccess }: Registr
       const result = await listarItensDaMovimentacao(movimentacao.id);
       setItens(result);
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [movimentacao.id]);
 
   function handleSubmit(e: React.FormEvent) {

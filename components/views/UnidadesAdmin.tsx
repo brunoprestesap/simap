@@ -193,7 +193,7 @@ export function UnidadesAdmin() {
 
             {/* Lista */}
             {tombosFiltrados.length === 0 ? (
-              <p className="text-center text-sm text-muted-foreground py-6">Nenhum tombo encontrado para "{buscaTombo}".</p>
+              <p className="text-center text-sm text-muted-foreground py-6">{`Nenhum tombo encontrado para "${buscaTombo}".`}</p>
             ) : (
               <div className="space-y-1.5">
                 {tombosFiltrados.map((t) => (

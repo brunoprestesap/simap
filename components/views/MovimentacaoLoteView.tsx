@@ -249,11 +249,11 @@ export function MovimentacaoLoteView({
   }, []);
 
   useEffect(() => {
-    if (!unidadeOrigem) {
-      setSetoresOrigem([]);
-      return;
-    }
     startLoadSetoresOrigem(async () => {
+      if (!unidadeOrigem) {
+        setSetoresOrigem([]);
+        return;
+      }
       const result = await listarSetoresPorUnidade(unidadeOrigem.id);
       setSetoresOrigem(result);
     });
@@ -261,12 +261,12 @@ export function MovimentacaoLoteView({
   }, [unidadeOrigem?.id]);
 
   useEffect(() => {
-    if (!unidadeDestino) {
-      setSetoresDestino([]);
-      setSetorDestinoId("");
-      return;
-    }
     startLoadSetoresDestino(async () => {
+      if (!unidadeDestino) {
+        setSetoresDestino([]);
+        setSetorDestinoId("");
+        return;
+      }
       const result = await listarSetoresPorUnidade(unidadeDestino.id);
       setSetoresDestino(result);
       setSetorDestinoId("");
@@ -275,11 +275,11 @@ export function MovimentacaoLoteView({
   }, [unidadeDestino?.id]);
 
   useEffect(() => {
-    if (!unidadeOrigem) {
-      setTomboData(null);
-      return;
-    }
     startLoadTombos(async () => {
+      if (!unidadeOrigem) {
+        setTomboData(null);
+        return;
+      }
       const result = await listarTombos({
         unidadeId: unidadeOrigem.id,
         setorId: setorFiltroId || undefined,
