@@ -37,7 +37,7 @@ export async function revalidateJwtToken({
   onInvalidate,
 }: RevalidateJwtArgs): Promise<JWT | null> {
   if (user) {
-    token.id = user.id!;
+    token.id = user.id ?? "";
     token.matricula = (user as unknown as { matricula: string }).matricula;
     token.nome = (user as unknown as { nome: string }).nome;
     token.perfil = (user as unknown as { perfil: string }).perfil;

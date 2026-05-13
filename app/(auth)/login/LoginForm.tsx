@@ -5,8 +5,6 @@ import { signIn } from "next-auth/react";
 import { useState } from "react";
 import { Loader2, AlertCircle, User, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { PerfilUsuario } from "@/lib/generated/prisma/client";
-import { getHomeByPerfil } from "@/lib/profile-home";
 
 export function LoginForm() {
   const router = useRouter();
@@ -35,18 +33,19 @@ export function LoginForm() {
         redirect: false,
       });
 
+      if (result?.code === "rate_limit") {
+        setError("Muitas tentativas de login. Aguarde alguns minutos antes de tentar novamente.");
+        setIsLoading(false);
+        return;
+      }
+
       if (result?.error) {
         setError("Matrícula ou senha incorretos.");
         setIsLoading(false);
         return;
       }
 
-      // Fetch session to get profile for redirect
-      const sessionRes = await fetch("/api/auth/session");
-      const session = await sessionRes.json();
-      const perfil = session?.user?.perfil as PerfilUsuario | undefined;
-      const home = perfil ? getHomeByPerfil(perfil) : "/home";
-      router.push(home);
+      router.push("/home");
       router.refresh();
     } catch {
       setError("Erro ao conectar ao servidor de autenticação.");

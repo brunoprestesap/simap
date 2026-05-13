@@ -1,4 +1,4 @@
-import NextAuth from "next-auth";
+import NextAuth, { CredentialsSignin } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { prisma } from "@/lib/prisma";
 import { authConfig } from "@/lib/auth.config";
@@ -14,6 +14,10 @@ import { authLogger } from "@/lib/logger";
 import { consumeAttempt, resetAttempts } from "@/lib/rate-limit";
 import { revalidateJwtToken } from "@/lib/auth-jwt-callback";
 export { getHomeByPerfil } from "@/lib/profile-home";
+
+class RateLimitError extends CredentialsSignin {
+  code = "rate_limit";
+}
 
 const LOGIN_RATE_LIMIT = {
   windowMs: 60_000,
@@ -111,7 +115,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               { ip, retryAfterMs: rlIp.retryAfterMs },
               "login bloqueado por rate limit de IP",
             );
-            return null;
+            throw new RateLimitError();
           }
 
           const rl = consumeAttempt(`login:${matricula}`, LOGIN_RATE_LIMIT);
@@ -120,7 +124,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               { matricula, retryAfterMs: rl.retryAfterMs },
               "login bloqueado por rate limit",
             );
-            return null;
+            throw new RateLimitError();
           }
 
           let ldapDisplayName: string | null = null;

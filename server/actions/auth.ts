@@ -1,7 +1,7 @@
 "use server";
 
 import { signIn } from "@/lib/auth";
-import { AuthError } from "next-auth";
+import { AuthError, CredentialsSignin } from "next-auth";
 
 export async function loginAction(
   _prevState: { error: string } | null,
@@ -22,6 +22,9 @@ export async function loginAction(
     });
   } catch (error) {
     if (error instanceof AuthError) {
+      if (error instanceof CredentialsSignin && error.code === "rate_limit") {
+        return { error: "Muitas tentativas de login. Aguarde alguns minutos antes de tentar novamente." };
+      }
       if (error.type === "CredentialsSignin") {
         return { error: "Matrícula ou senha incorretos." };
       }
