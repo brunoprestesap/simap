@@ -23,9 +23,11 @@ FROM node:20-slim AS runner
 WORKDIR /app
 
 # System deps: openssl (Prisma), curl (healthcheck), libaio1 (Oracle Thick mode)
+# ca-certificates necessário para curl verificar TLS ao baixar Oracle Instant Client
 RUN apt-get update && apt-get install -y --no-install-recommends \
     openssl \
     curl \
+    ca-certificates \
     libaio1 \
     unzip \
     && rm -rf /var/lib/apt/lists/*
