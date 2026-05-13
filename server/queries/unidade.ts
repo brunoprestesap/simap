@@ -9,3 +9,10 @@ export async function listarUnidadesAtivas() {
     select: { id: true, codigo: true, descricao: true },
   });
 }
+
+export async function listarTodasUnidades() {
+  return prisma.unidade.findMany({
+    orderBy: { descricao: "asc" },
+    select: { id: true, codigo: true, descricao: true, ativo: true },
+  });
+}

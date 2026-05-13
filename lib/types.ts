@@ -16,12 +16,13 @@ export const NAV_ITEMS_BY_PROFILE: Record<PerfilUsuario, NavItem[]> = {
   SERVIDOR_RESPONSAVEL: [
     { label: "Início", href: "/home", icon: "Home" },
     { label: "Patrimônios", href: "/patrimonio", icon: "Package" },
-    { label: "Movimentação", href: "/movimentacao", icon: "ArrowLeftRight" },
+    { label: "Mov. em Lote", href: "/movimentacao/lote", icon: "PackagePlus" },
     { label: "Notificações", href: "/notificacoes", icon: "Bell" },
   ],
   SERVIDOR_SEMAP: [
     { label: "Início", href: "/home", icon: "Home" },
     { label: "Backlog", href: "/backlog", icon: "ClipboardList" },
+    { label: "Mov. em Lote", href: "/movimentacao/lote", icon: "PackagePlus" },
     { label: "Tombos", href: "/tombos", icon: "Monitor" },
     { label: "Admin", href: "/admin", icon: "Settings" },
   ],
