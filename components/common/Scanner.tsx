@@ -120,6 +120,7 @@ export function Scanner({ onScan, onError, active = true }: ScannerProps) {
       const html5QrCode = new Html5Qrcode(containerId, {
         formatsToSupport: [...BARCODE_FORMATS],
         verbose: false,
+        experimentalFeatures: { useBarCodeDetectorIfSupported: true },
       });
       scannerRef.current = html5QrCode;
 
@@ -129,10 +130,10 @@ export function Scanner({ onScan, onError, active = true }: ScannerProps) {
         : { facingMode: "environment" as const };
 
       const scanConfig = {
-        fps: 4,
+        fps: 10,
         qrbox: { width: 280, height: 120 },
         aspectRatio: desktop ? 16 / 9 : undefined,
-        disableFlip: false,
+        disableFlip: true,
       };
 
       const onSuccess = (decodedText: string) => {
@@ -147,7 +148,7 @@ export function Scanner({ onScan, onError, active = true }: ScannerProps) {
         try {
           await html5QrCode.start(
             { facingMode: "environment" as const },
-            { fps: 4, qrbox: { width: 280, height: 120 }, disableFlip: false },
+            { fps: 10, qrbox: { width: 280, height: 120 }, disableFlip: true },
             onSuccess,
             undefined
           );
