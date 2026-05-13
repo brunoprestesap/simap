@@ -16,6 +16,9 @@ vi.mock("@/lib/prisma", () => ({
       findUnique: vi.fn(),
       findFirst: vi.fn(),
     },
+    unidade: {
+      findMany: vi.fn(() => Promise.resolve([])),
+    },
   },
 }));
 
@@ -327,6 +330,7 @@ describe("buscarTomboDetalhe", () => {
         },
       },
     ],
+    historicosTermo: [],
   };
 
   beforeEach(() => {

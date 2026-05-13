@@ -202,9 +202,12 @@ function SicamSnapshotSection({
       </div>
 
       <SicamRow
-        label="Unidade (código)"
-        sicamValue={dados.codLotacao !== null ? String(dados.codLotacao) : null}
-        localValue={tomboLocal.unidade?.codigo}
+        label="Unidade"
+        sicamValue={
+          dados.descLotacao ??
+          (dados.codLotacao !== null ? String(dados.codLotacao) : null)
+        }
+        localValue={tomboLocal.unidade?.descricao ?? tomboLocal.unidade?.codigo}
         divergente={divergencias.includes("unidade")}
       />
       <SicamRow
@@ -251,8 +254,10 @@ function SicamSnapshotSection({
 
 function HistoricoTermoSicamSection({
   historico,
+  unidadesHistorico,
 }: {
   historico: TomboDetalhe["historicosTermo"];
+  unidadesHistorico: TomboDetalhe["unidadesHistorico"];
 }) {
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-card">
@@ -286,8 +291,11 @@ function HistoricoTermoSicamSection({
           {historico.map((termo, index) => {
             const isMostRecent = index === 0;
             const isLast = index === historico.length - 1;
+            const descUnidade = termo.codLotacao
+              ? (unidadesHistorico[String(termo.codLotacao)] ?? `Unid. ${termo.codLotacao}`)
+              : null;
             const localizacao = [
-              termo.codLotacao ? `Unid. ${termo.codLotacao}` : null,
+              descUnidade,
               termo.nomeSetor ?? (termo.codSetor ? `Setor ${termo.codSetor}` : null),
             ]
               .filter(Boolean)
@@ -437,7 +445,7 @@ export default async function TomboDetalhePage({ params }: Props) {
 
       <SicamSnapshotSection snapshot={sicamSnapshot} tomboLocal={tombo} />
 
-      <HistoricoTermoSicamSection historico={tombo.historicosTermo} />
+      <HistoricoTermoSicamSection historico={tombo.historicosTermo} unidadesHistorico={tombo.unidadesHistorico} />
 
       {nomeResp && (
         <InfoSection titulo="Responsável">

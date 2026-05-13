@@ -265,7 +265,7 @@ function computeDivergencias(
   return divergencias;
 }
 
-export async function buscarTomboDetalhe(id: string) {
+async function _buscarTomboDetalheRaw(id: string) {
   return prisma.tombo.findUnique({
     where: { id },
     include: {
@@ -294,6 +294,34 @@ export async function buscarTomboDetalhe(id: string) {
       },
     },
   });
+}
+
+export async function buscarTomboDetalhe(id: string) {
+  const tombo = await _buscarTomboDetalheRaw(id);
+  if (!tombo) return null;
+
+  // Enriquece o histórico com as descrições de unidade já salvas no SIMAP
+  // (populadas pelo sync via SARH.RH_LOTACAO) para evitar mostrar só o código.
+  const codigosHistorico = [
+    ...new Set(
+      tombo.historicosTermo
+        .map((h) => (h.codLotacao !== null ? String(h.codLotacao) : null))
+        .filter((c): c is string => c !== null),
+    ),
+  ];
+
+  const unidadesHistorico: Record<string, string> = {};
+  if (codigosHistorico.length > 0) {
+    const unidades = await prisma.unidade.findMany({
+      where: { codigo: { in: codigosHistorico } },
+      select: { codigo: true, descricao: true },
+    });
+    for (const u of unidades) {
+      unidadesHistorico[u.codigo] = u.descricao;
+    }
+  }
+
+  return { ...tombo, unidadesHistorico };
 }
 
 export type TomboDetalhe = NonNullable<
