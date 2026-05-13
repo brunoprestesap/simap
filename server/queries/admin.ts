@@ -14,6 +14,22 @@ export async function listarUnidadesAdmin(busca?: string) {
   });
 }
 
+export async function listarTombosDaUnidade(unidadeId: string) {
+  return prisma.tombo.findMany({
+    where: { unidadeId },
+    orderBy: { numero: "asc" },
+    take: 500,
+    select: {
+      id: true,
+      numero: true,
+      descricaoMaterial: true,
+      ativo: true,
+      matriculaResponsavel: true,
+      setor: { select: { nome: true } },
+    },
+  });
+}
+
 export async function listarSetoresAdmin(busca?: string) {
   return prisma.setor.findMany({
     where: buildSearchFilter(busca, ["codigo", "nome"]),

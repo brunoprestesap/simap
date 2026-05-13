@@ -5,12 +5,14 @@ import { X } from "lucide-react";
 
 interface AdminSheetProps {
   title: string;
+  subtitle?: React.ReactNode;
   open: boolean;
   onClose: () => void;
   children: React.ReactNode;
+  wide?: boolean;
 }
 
-export function AdminSheet({ title, open, onClose, children }: AdminSheetProps) {
+export function AdminSheet({ title, subtitle, open, onClose, children, wide }: AdminSheetProps) {
   if (!open) return null;
 
   return (
@@ -20,16 +22,19 @@ export function AdminSheet({ title, open, onClose, children }: AdminSheetProps) 
         onClick={onClose}
         aria-hidden="true"
       />
-      <div className="fixed inset-y-0 right-0 z-50 w-full md:w-[420px] bg-card shadow-xl flex flex-col animate-in slide-in-from-right duration-200">
-        <div className="flex items-center justify-between border-b border-border px-4 py-3 md:px-6">
-          <h2 className="text-lg font-semibold text-foreground">{title}</h2>
-          <button
-            onClick={onClose}
-            aria-label="Fechar"
-            className="rounded-md p-1 hover:bg-accent transition-colors"
-          >
-            <X className="h-5 w-5 text-muted-foreground" />
-          </button>
+      <div className={`fixed inset-y-0 right-0 z-50 w-full ${wide ? "md:w-[560px]" : "md:w-[420px]"} bg-card shadow-xl flex flex-col animate-in slide-in-from-right duration-200`}>
+        <div className="border-b border-border px-4 py-3 md:px-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-foreground">{title}</h2>
+            <button
+              onClick={onClose}
+              aria-label="Fechar"
+              className="rounded-md p-1 hover:bg-accent transition-colors"
+            >
+              <X className="h-5 w-5 text-muted-foreground" />
+            </button>
+          </div>
+          {subtitle && <p className="mt-0.5 text-xs text-muted-foreground">{subtitle}</p>}
         </div>
         <div className="flex-1 overflow-y-auto p-4 md:p-6">{children}</div>
       </div>

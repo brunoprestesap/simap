@@ -20,6 +20,7 @@ interface AdminDataTableProps<T> {
   onAdd?: () => void;
   addLabel?: string;
   emptyMessage?: string;
+  onRowClick?: (row: T) => void;
 }
 
 export function AdminDataTable<T>({
@@ -31,6 +32,7 @@ export function AdminDataTable<T>({
   onAdd,
   addLabel = "Novo",
   emptyMessage = "Nenhum registro encontrado.",
+  onRowClick,
 }: AdminDataTableProps<T>) {
   const [busca, setBusca] = useState("");
   const debouncedSearch = useDebouncedCallback((valor: string) => {
@@ -91,7 +93,8 @@ export function AdminDataTable<T>({
               {data.map((row) => (
                 <tr
                   key={getRowId(row)}
-                  className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
+                  className={`border-b border-border last:border-0 hover:bg-muted/30 transition-colors ${onRowClick ? "cursor-pointer" : ""}`}
+                  onClick={onRowClick ? () => onRowClick(row) : undefined}
                 >
                   {columns.map((col, i) => (
                     <td key={i} className={`px-4 py-3 ${col.className || ""}`}>
