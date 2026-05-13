@@ -90,3 +90,20 @@ export async function listarBacklog(filters: BacklogFilters = {}) {
     paginaAtual: pagina,
   };
 }
+
+export async function listarItensDaMovimentacao(movimentacaoId: string) {
+  return prisma.itemMovimentacao.findMany({
+    where: { movimentacaoId },
+    orderBy: { tombo: { numero: "asc" } },
+    select: {
+      tombo: {
+        select: {
+          numero: true,
+          descricaoMaterial: true,
+          setor: { select: { nome: true } },
+          matriculaResponsavel: true,
+        },
+      },
+    },
+  });
+}
