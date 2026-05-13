@@ -185,13 +185,15 @@ describe("buscarTomboSicam", () => {
     expect(tombo?.siglaLotacao).toBeNull();
   });
 
-  it("inclui LEFT JOIN SARH.RH_LOTACAO na SQL gerada", async () => {
+  it("inclui subquery SARH.RH_LOTACAO com ROW_NUMBER para preferir registros ativos", async () => {
     resolveWith([]);
 
     await buscarTomboSicam("12423");
 
     const [sql] = mockExecute.mock.calls[0];
-    expect(sql).toMatch(/LEFT JOIN SARH\.RH_LOTACAO\s+rl/);
+    expect(sql).toMatch(/FROM SARH\.RH_LOTACAO/);
+    expect(sql).toMatch(/ROW_NUMBER\(\)/i);
+    expect(sql).toMatch(/PARTITION BY LOTA_COD_LOTACAO/i);
     expect(sql).toMatch(/LOTA_COD_LOTACAO\s*=\s*tr\.CO_LOTA/);
   });
 });

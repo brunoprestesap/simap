@@ -64,7 +64,9 @@ interface SicamTomboRow {
 // Colunas selecionadas — ficam em uma constante porque são usadas em duas
 // queries com JOIN levemente diferente (LEFT vs INNER no TERMO).
 // SARH.RH_LOTACAO (mesmo servidor Oracle, mesmo usuário) fornece a descrição
-// longa da lotação via LOTA_COD_LOTACAO = tr.CO_LOTA.
+// longa da lotação. O JOIN usa uma subquery com ROW_NUMBER para preferir o
+// registro ativo (LOTA_DAT_FIM IS NULL) mas cair para o mais recente encerrado
+// quando a unidade foi desativada no SARH (ex: código 269 encerrado em 2020).
 const TOMBO_COLUMNS_SQL = `
   TO_CHAR(t.NU_TOMBO) AS NU_TOMBO,
   m.DE_MAT            AS DESCRICAO_MATERIAL,
@@ -156,9 +158,12 @@ export async function buscarTomboSicam(
       LEFT JOIN PATRIMONIO_SETOR ps
         ON ps.CO_LOTA  = tr.CO_LOTA
        AND ps.CO_SETOR = tr.CO_SETOR
-      LEFT JOIN SARH.RH_LOTACAO rl
-        ON rl.LOTA_COD_LOTACAO = tr.CO_LOTA
-       AND rl.LOTA_DAT_FIM IS NULL
+      LEFT JOIN (
+        SELECT LOTA_COD_LOTACAO, LOTA_DSC_LOTACAO, LOTA_SIGLA_LOTACAO,
+               ROW_NUMBER() OVER (PARTITION BY LOTA_COD_LOTACAO
+                                 ORDER BY LOTA_DAT_FIM DESC NULLS FIRST) rn
+        FROM SARH.RH_LOTACAO
+      ) rl ON rl.LOTA_COD_LOTACAO = tr.CO_LOTA AND rl.rn = 1
     WHERE t.NU_TOMBO  = :nuTombo
       AND t.TI_TOMBO != 'L'
       AND t.IN_SAIDA  = 1
@@ -387,9 +392,12 @@ export async function listarTodosTombosAtivos(
       LEFT JOIN PATRIMONIO_SETOR ps
         ON ps.CO_LOTA  = tr.CO_LOTA
        AND ps.CO_SETOR = tr.CO_SETOR
-      LEFT JOIN SARH.RH_LOTACAO rl
-        ON rl.LOTA_COD_LOTACAO = tr.CO_LOTA
-       AND rl.LOTA_DAT_FIM IS NULL
+      LEFT JOIN (
+        SELECT LOTA_COD_LOTACAO, LOTA_DSC_LOTACAO, LOTA_SIGLA_LOTACAO,
+               ROW_NUMBER() OVER (PARTITION BY LOTA_COD_LOTACAO
+                                 ORDER BY LOTA_DAT_FIM DESC NULLS FIRST) rn
+        FROM SARH.RH_LOTACAO
+      ) rl ON rl.LOTA_COD_LOTACAO = tr.CO_LOTA AND rl.rn = 1
     WHERE t.TI_TOMBO != 'L'
       AND t.IN_SAIDA  = 1
     ORDER BY t.NU_TOMBO
@@ -611,9 +619,12 @@ export async function listarTombosPorLotacao(
       LEFT JOIN PATRIMONIO_SETOR ps
         ON ps.CO_LOTA  = tr.CO_LOTA
        AND ps.CO_SETOR = tr.CO_SETOR
-      LEFT JOIN SARH.RH_LOTACAO rl
-        ON rl.LOTA_COD_LOTACAO = tr.CO_LOTA
-       AND rl.LOTA_DAT_FIM IS NULL
+      LEFT JOIN (
+        SELECT LOTA_COD_LOTACAO, LOTA_DSC_LOTACAO, LOTA_SIGLA_LOTACAO,
+               ROW_NUMBER() OVER (PARTITION BY LOTA_COD_LOTACAO
+                                 ORDER BY LOTA_DAT_FIM DESC NULLS FIRST) rn
+        FROM SARH.RH_LOTACAO
+      ) rl ON rl.LOTA_COD_LOTACAO = tr.CO_LOTA AND rl.rn = 1
     WHERE tr.CO_LOTA  = :codLotacao
       AND t.TI_TOMBO != 'L'
       AND t.IN_SAIDA  = 1
