@@ -36,6 +36,10 @@ export interface SicamTombo {
   matriculaResponsavel: string | null;
   dataTermo: Date | null;
   termoAssinado: boolean;
+  /** Descrição longa da lotação, vinda de SARH.RH_LOTACAO.LOTA_DSC_LOTACAO. Null quando a lotação não tem cadastro no SARH. */
+  descLotacao: string | null;
+  /** Sigla da lotação, vinda de SARH.RH_LOTACAO.LOTA_SIGLA_LOTACAO. */
+  siglaLotacao: string | null;
 }
 
 interface SicamTomboRow {
@@ -53,10 +57,14 @@ interface SicamTomboRow {
   MATRICULA_RESPONSAVEL: string | null;
   DT_TERMO: Date | null;
   FG_ASSINADO: string | null;
+  DESC_LOTACAO: string | null;
+  SIGLA_LOTACAO: string | null;
 }
 
 // Colunas selecionadas — ficam em uma constante porque são usadas em duas
 // queries com JOIN levemente diferente (LEFT vs INNER no TERMO).
+// SARH.RH_LOTACAO (mesmo servidor Oracle, mesmo usuário) fornece a descrição
+// longa da lotação via LOTA_COD_LOTACAO = tr.CO_LOTA.
 const TOMBO_COLUMNS_SQL = `
   TO_CHAR(t.NU_TOMBO) AS NU_TOMBO,
   m.DE_MAT            AS DESCRICAO_MATERIAL,
@@ -71,7 +79,9 @@ const TOMBO_COLUMNS_SQL = `
   ps.NO_SETOR         AS NOME_SETOR,
   tr.NU_MATR_RESP_TOMBO AS MATRICULA_RESPONSAVEL,
   tr.DT_TERMO,
-  tr.FG_ASSINADO
+  tr.FG_ASSINADO,
+  rl.LOTA_DSC_LOTACAO   AS DESC_LOTACAO,
+  rl.LOTA_SIGLA_LOTACAO AS SIGLA_LOTACAO
 `;
 
 function normalizeNumero(input: string | number): number {
@@ -104,6 +114,8 @@ function mapTomboRow(row: SicamTomboRow): SicamTombo {
     matriculaResponsavel: row.MATRICULA_RESPONSAVEL,
     dataTermo: row.DT_TERMO,
     termoAssinado: row.FG_ASSINADO === "S",
+    descLotacao: row.DESC_LOTACAO ?? null,
+    siglaLotacao: row.SIGLA_LOTACAO ?? null,
   };
 }
 
@@ -144,6 +156,9 @@ export async function buscarTomboSicam(
       LEFT JOIN PATRIMONIO_SETOR ps
         ON ps.CO_LOTA  = tr.CO_LOTA
        AND ps.CO_SETOR = tr.CO_SETOR
+      LEFT JOIN SARH.RH_LOTACAO rl
+        ON rl.LOTA_COD_LOTACAO = tr.CO_LOTA
+       AND rl.LOTA_DAT_FIM IS NULL
     WHERE t.NU_TOMBO  = :nuTombo
       AND t.TI_TOMBO != 'L'
       AND t.IN_SAIDA  = 1
@@ -372,6 +387,9 @@ export async function listarTodosTombosAtivos(
       LEFT JOIN PATRIMONIO_SETOR ps
         ON ps.CO_LOTA  = tr.CO_LOTA
        AND ps.CO_SETOR = tr.CO_SETOR
+      LEFT JOIN SARH.RH_LOTACAO rl
+        ON rl.LOTA_COD_LOTACAO = tr.CO_LOTA
+       AND rl.LOTA_DAT_FIM IS NULL
     WHERE t.TI_TOMBO != 'L'
       AND t.IN_SAIDA  = 1
     ORDER BY t.NU_TOMBO
@@ -593,6 +611,9 @@ export async function listarTombosPorLotacao(
       LEFT JOIN PATRIMONIO_SETOR ps
         ON ps.CO_LOTA  = tr.CO_LOTA
        AND ps.CO_SETOR = tr.CO_SETOR
+      LEFT JOIN SARH.RH_LOTACAO rl
+        ON rl.LOTA_COD_LOTACAO = tr.CO_LOTA
+       AND rl.LOTA_DAT_FIM IS NULL
     WHERE tr.CO_LOTA  = :codLotacao
       AND t.TI_TOMBO != 'L'
       AND t.IN_SAIDA  = 1

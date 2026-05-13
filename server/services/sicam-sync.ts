@@ -378,18 +378,31 @@ async function resolverLocalizacao(
   }
 
   const codigoUnidade = String(tombo.codLotacao);
+  const descricaoSarh = tombo.descLotacao ?? null;
   let unidade = unidades.get(codigoUnidade);
   if (!unidade) {
     const criada = await prisma.unidade.create({
-      data: { codigo: codigoUnidade, descricao: codigoUnidade },
+      data: {
+        codigo: codigoUnidade,
+        descricao: descricaoSarh ?? codigoUnidade,
+      },
       select: { id: true },
     });
-    syncLogger.warn(
-      { codigoUnidade },
-      "Unidade criada sem descrição longa — edite em /admin/unidades",
-    );
+    if (!descricaoSarh) {
+      syncLogger.warn(
+        { codigoUnidade },
+        "Unidade criada sem descrição longa — SARH.RH_LOTACAO sem registro para esse código",
+      );
+    }
     unidade = criada;
     unidades.set(codigoUnidade, criada);
+  } else if (descricaoSarh) {
+    // Atualiza a descrição quando o SARH provê a versão longa e a unidade
+    // foi criada anteriormente só com o código numérico.
+    await prisma.unidade.updateMany({
+      where: { codigo: codigoUnidade, descricao: codigoUnidade },
+      data: { descricao: descricaoSarh },
+    });
   }
 
   if (tombo.codSetor === null) {

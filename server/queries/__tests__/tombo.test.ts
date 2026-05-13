@@ -224,6 +224,8 @@ describe("buscarTomboParaMovimentacao", () => {
         matriculaResponsavel: "AP99",
         dataTermo: null,
         termoAssinado: true,
+        descLotacao: null,
+        siglaLotacao: null,
       },
       divergencias: [],
     });

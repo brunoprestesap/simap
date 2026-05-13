@@ -31,6 +31,8 @@ const rowFixture = {
   MATRICULA_RESPONSAVEL: "AP20192",
   DT_TERMO: new Date("2025-12-03"),
   FG_ASSINADO: "S",
+  DESC_LOTACAO: "NÚCLEO DE TECNOLOGIA DA INFORMAÇÃO NUTEC",
+  SIGLA_LOTACAO: "NUTEC",
 };
 
 function resolveWith<T>(rows: T[]) {
@@ -65,6 +67,8 @@ describe("buscarTomboSicam", () => {
       matriculaResponsavel: "AP20192",
       dataTermo: new Date("2025-12-03"),
       termoAssinado: true,
+      descLotacao: "NÚCLEO DE TECNOLOGIA DA INFORMAÇÃO NUTEC",
+      siglaLotacao: "NUTEC",
     });
   });
 
@@ -161,6 +165,34 @@ describe("buscarTomboSicam", () => {
       dataTermo: null,
       termoAssinado: false,
     });
+  });
+
+  it("mapeia descLotacao e siglaLotacao do SARH quando disponíveis", async () => {
+    resolveWith([rowFixture]);
+
+    const tombo = await buscarTomboSicam("12423");
+
+    expect(tombo?.descLotacao).toBe("NÚCLEO DE TECNOLOGIA DA INFORMAÇÃO NUTEC");
+    expect(tombo?.siglaLotacao).toBe("NUTEC");
+  });
+
+  it("retorna descLotacao=null quando lotação não tem cadastro no SARH", async () => {
+    resolveWith([{ ...rowFixture, DESC_LOTACAO: null, SIGLA_LOTACAO: null }]);
+
+    const tombo = await buscarTomboSicam("12423");
+
+    expect(tombo?.descLotacao).toBeNull();
+    expect(tombo?.siglaLotacao).toBeNull();
+  });
+
+  it("inclui LEFT JOIN SARH.RH_LOTACAO na SQL gerada", async () => {
+    resolveWith([]);
+
+    await buscarTomboSicam("12423");
+
+    const [sql] = mockExecute.mock.calls[0];
+    expect(sql).toMatch(/LEFT JOIN SARH\.RH_LOTACAO\s+rl/);
+    expect(sql).toMatch(/LOTA_COD_LOTACAO\s*=\s*tr\.CO_LOTA/);
   });
 });
 
@@ -278,6 +310,8 @@ describe("compararLocalComSicam", () => {
     matriculaResponsavel: "AP20192",
     dataTermo: new Date("2025-12-03"),
     termoAssinado: true,
+    descLotacao: "NÚCLEO DE TECNOLOGIA DA INFORMAÇÃO NUTEC",
+    siglaLotacao: "NUTEC",
   };
 
   it("retorna vazio quando todos os campos batem", () => {

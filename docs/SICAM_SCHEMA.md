@@ -103,17 +103,22 @@ Demais colunas são de almoxarifado (saldos, quantidades, datas) — ignorar.
 
 **PK composta**: o mesmo `CO_SETOR` pode existir em múltiplas lotações. **Sempre fazer JOIN com `CO_LOTA + CO_SETOR`**.
 
-### `SICAM.LOTACAO_SICAM_RH` — lotações (parcial)
+### `SICAM.LOTACAO_SICAM_RH` — descartada
 
-**~48 linhas, 3 colunas:**
+**~48 linhas, 3 colunas.** Usa código hierárquico diferente de `TERMO.CO_LOTA` (100000, 100010…). Não tem coluna de descrição. **Descartada.**
 
-| # | Coluna | Tipo | Notas |
+### `SARH.RH_LOTACAO` — master de lotações (fonte correta)
+
+**474 linhas.** Schema `SARH` no mesmo servidor Oracle (`JFAP.TRF1.GOV.BR`), mesma conexão, usuário `ap20256` tem SELECT. Como `CURRENT_SCHEMA=SICAM`, referenciar com prefixo explícito `SARH.RH_LOTACAO`.
+
+| # | Coluna | Tipo | Mapeamento |
 |---|---|---|---|
-| 1 | `CO_LOTACAO` | NUMBER | bate com `TERMO.CO_LOTA` por tipo |
-| 2 | `LOTA_SIGLA_SECAO` | VARCHAR2(2) | só sigla curta ("AP" etc.) |
-| 3 | `LOTA_COD_LOTACAO` | NUMBER | provável link para outro sistema |
+| 1 | `LOTA_COD_LOTACAO` | NUMBER | equivale a `TERMO.CO_LOTA` — JOIN key |
+| 2 | `LOTA_DSC_LOTACAO` | VARCHAR2 | `Unidade.descricao` — ex: "NÚCLEO DE TECNOLOGIA DA INFORMAÇÃO NUTEC" |
+| 3 | `LOTA_SIGLA_LOTACAO` | VARCHAR2 | sigla — ex: "NUTEC" |
+| 4 | `LOTA_DAT_FIM` | DATE | NULL = ativa; filtrar `LOTA_DAT_FIM IS NULL` |
 
-**Limitação**: não há coluna de descrição longa. Para o SIMAP, vamos manter o cache local de `Unidade.descricao` (alimentado por importações CSV anteriores) — a Oracle só fornece o código.
+**Uso no SIMAP**: LEFT JOIN em todas as queries principais; `descLotacao` e `siglaLotacao` populados em `SicamTombo`. O sync usa `descLotacao` ao criar `Unidade.descricao` (fallback para o código numérico se NULL).
 
 ### `SICAM.FORNECEDOR` — master de fornecedores
 
@@ -195,9 +200,19 @@ Amostra de 10 linhas mostrou:
 - `CO_LOTACAO` no formato 100000, 100010, 100020... (estrutura hierárquica)
 - `LOTA_COD_LOTACAO` valores não-sequenciais (70, 71, 72, 73, 107, 115, 116, 185, 197, 74)
 
-**Tombo de teste 12423 retornou `TERMO.CO_LOTA = 348`** — não bate com nenhum padrão de `LOTACAO_SICAM_RH.CO_LOTACAO`. **Conclusão**: `LOTACAO_SICAM_RH` usa código de outro sistema. A "lotação patrimonial" no SICAM não tem master table explícita — o universo é dado pelos `CO_LOTA` distintos em `PATRIMONIO_SETOR`.
+**Tombo de teste 12423 retornou `TERMO.CO_LOTA = 348`** — não bate com nenhum padrão de `LOTACAO_SICAM_RH.CO_LOTACAO`. **Conclusão**: `LOTACAO_SICAM_RH` usa código de outro sistema. **Descartada.**
 
-**Estratégia para SIMAP**: usar `TERMO.CO_LOTA` como `Unidade.codigo`. Para a descrição (`Unidade.descricao`), confiar no cache local do SIMAP populado por CSVs anteriores.
+### `SARH.RH_LOTACAO` — bridge para descrição de lotação (confirmado 2026-05-13)
+
+Query de validação executada diretamente:
+```sql
+SELECT rl.LOTA_DSC_LOTACAO AS DSC, rl.LOTA_DAT_FIM AS DAT_FIM
+FROM SARH.RH_LOTACAO rl
+WHERE rl.LOTA_COD_LOTACAO = 348
+```
+Resultado: `DSC = "NÚCLEO DE TECNOLOGIA DA INFORMAÇÃO NUTEC"`, `DAT_FIM = null`. Confirmado `LOTA_COD_LOTACAO = 348 = TERMO.CO_LOTA`. COUNT(*) = 474 linhas.
+
+**Estratégia para SIMAP**: usar `TERMO.CO_LOTA` como `Unidade.codigo`. Para a descrição (`Unidade.descricao`), JOIN com `SARH.RH_LOTACAO` via `LOTA_COD_LOTACAO = tr.CO_LOTA AND LOTA_DAT_FIM IS NULL`. Fallback para o código numérico quando NULL.
 
 ### JOIN canônico testado em tombo real
 

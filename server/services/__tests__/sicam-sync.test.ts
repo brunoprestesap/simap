@@ -48,6 +48,8 @@ function tomboFixture(overrides: Partial<{
   codSetor: number | null;
   matriculaResponsavel: string | null;
   nuTermo: number | null;
+  descLotacao: string | null;
+  siglaLotacao: string | null;
 }> = {}) {
   return {
     numero: overrides.numero ?? "12423",
@@ -64,6 +66,8 @@ function tomboFixture(overrides: Partial<{
     matriculaResponsavel: overrides.matriculaResponsavel ?? "AP20192",
     dataTermo: new Date("2025-12-03"),
     termoAssinado: true,
+    descLotacao: overrides.descLotacao ?? null,
+    siglaLotacao: overrides.siglaLotacao ?? null,
   };
 }
 
