@@ -15,7 +15,7 @@ vi.mock("@/lib/prisma", () => ({
     },
     setor: {
       findMany: vi.fn(),
-      create: vi.fn(),
+      upsert: vi.fn(),
     },
     usuario: {
       findMany: vi.fn(),
@@ -29,6 +29,7 @@ vi.mock("@/lib/prisma", () => ({
       upsert: vi.fn(),
     },
     sincronizacaoSicam: {
+      findFirst: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
     },
@@ -86,6 +87,7 @@ function pageResult(tombos: ReturnType<typeof tomboFixture>[], pagina = 1, total
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(prisma.sincronizacaoSicam.findFirst).mockResolvedValue(null);
   vi.mocked(prisma.sincronizacaoSicam.create).mockResolvedValue({
     id: "sync1",
   } as never);
@@ -100,7 +102,7 @@ beforeEach(() => {
     id: "u-default",
   } as never);
   vi.mocked(prisma.unidade.updateMany).mockResolvedValue({ count: 0 } as never);
-  vi.mocked(prisma.setor.create).mockResolvedValue({
+  vi.mocked(prisma.setor.upsert).mockResolvedValue({
     id: "s-default",
   } as never);
   vi.mocked(prisma.tombo.create).mockResolvedValue({} as never);
