@@ -69,7 +69,7 @@ export function SicamSyncPanel({
 
       {isPending && (
         <p className="mt-3 rounded-md border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-          Sincronizando — pode levar 30s a 2 minutos. Não feche esta aba.
+          Sincronizando — pode levar até 5 minutos. Não feche esta aba.
         </p>
       )}
 

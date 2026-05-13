@@ -47,6 +47,16 @@ export async function executarSincronizacaoSicam(
 ): Promise<SicamSyncResult> {
   const inicio = Date.now();
 
+  const emAndamento = await prisma.sincronizacaoSicam.findFirst({
+    where: { status: "EM_ANDAMENTO" },
+    select: { id: true },
+  });
+  if (emAndamento) {
+    throw new Error(
+      `Já existe uma sincronização em andamento (id: ${emAndamento.id}). Aguarde ela concluir antes de iniciar outra.`,
+    );
+  }
+
   const sincronizacao = await prisma.sincronizacaoSicam.create({
     data: {
       iniciadoPorId,
