@@ -438,12 +438,10 @@ async function resolverLocalizacao(
   const chaveSetor = `${unidade.id}:${codigoSetor}`;
   let setor = setores.get(chaveSetor);
   if (!setor) {
-    const criado = await prisma.setor.create({
-      data: {
-        codigo: codigoSetor,
-        nome: tombo.nomeSetor ?? codigoSetor,
-        unidadeId: unidade.id,
-      },
+    const criado = await prisma.setor.upsert({
+      where: { codigo_unidadeId: { codigo: codigoSetor, unidadeId: unidade.id } },
+      create: { codigo: codigoSetor, nome: tombo.nomeSetor ?? codigoSetor, unidadeId: unidade.id },
+      update: {},
       select: { id: true },
     });
     setor = criado;
