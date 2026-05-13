@@ -33,6 +33,7 @@ const rowFixture = {
   FG_ASSINADO: "S",
   DESC_LOTACAO: "NÚCLEO DE TECNOLOGIA DA INFORMAÇÃO NUTEC",
   SIGLA_LOTACAO: "NUTEC",
+  SARH_INATIVO: 0 as 0 | 1 | null,
 };
 
 function resolveWith<T>(rows: T[]) {
@@ -69,6 +70,7 @@ describe("buscarTomboSicam", () => {
       termoAssinado: true,
       descLotacao: "NÚCLEO DE TECNOLOGIA DA INFORMAÇÃO NUTEC",
       siglaLotacao: "NUTEC",
+      sarhInativo: false,
     });
   });
 
@@ -196,6 +198,30 @@ describe("buscarTomboSicam", () => {
     expect(sql).toMatch(/PARTITION BY LOTA_COD_LOTACAO/i);
     expect(sql).toMatch(/LOTA_COD_LOTACAO\s*=\s*tr\.CO_LOTA/);
   });
+
+  it("mapeia sarhInativo=false quando SARH_INATIVO=0 (unidade ativa no SARH)", async () => {
+    resolveWith([{ ...rowFixture, SARH_INATIVO: 0 }]);
+
+    const tombo = await buscarTomboSicam("12423");
+
+    expect(tombo?.sarhInativo).toBe(false);
+  });
+
+  it("mapeia sarhInativo=true quando SARH_INATIVO=1 (unidade encerrada no SARH)", async () => {
+    resolveWith([{ ...rowFixture, SARH_INATIVO: 1 }]);
+
+    const tombo = await buscarTomboSicam("12423");
+
+    expect(tombo?.sarhInativo).toBe(true);
+  });
+
+  it("mapeia sarhInativo=null quando SARH_INATIVO=null (código não cadastrado no SARH)", async () => {
+    resolveWith([{ ...rowFixture, SARH_INATIVO: null }]);
+
+    const tombo = await buscarTomboSicam("12423");
+
+    expect(tombo?.sarhInativo).toBeNull();
+  });
 });
 
 describe("listarTombosPorLotacao", () => {
@@ -314,6 +340,7 @@ describe("compararLocalComSicam", () => {
     termoAssinado: true,
     descLotacao: "NÚCLEO DE TECNOLOGIA DA INFORMAÇÃO NUTEC",
     siglaLotacao: "NUTEC",
+    sarhInativo: false,
   };
 
   it("retorna vazio quando todos os campos batem", () => {

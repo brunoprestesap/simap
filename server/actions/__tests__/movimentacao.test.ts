@@ -41,6 +41,9 @@ vi.mock("@/lib/prisma", () => ({
     usuario: {
       findMany: vi.fn(),
     },
+    unidade: {
+      findUnique: vi.fn(),
+    },
   },
 }));
 
@@ -58,6 +61,32 @@ describe("criarMovimentacao", () => {
     });
   });
 
+  it("deve rejeitar movimentação para unidade de destino inativa", async () => {
+    vi.mocked(prisma.tombo.findMany).mockResolvedValue([
+      { id: "t1", numero: "1001", unidadeId: "u-origem" },
+    ] as Awaited<ReturnType<typeof prisma.tombo.findMany>>);
+
+    vi.mocked(prisma.itemMovimentacao.findMany).mockResolvedValue(
+      [] as Awaited<ReturnType<typeof prisma.itemMovimentacao.findMany>>,
+    );
+
+    vi.mocked(prisma.unidade.findUnique).mockResolvedValue(
+      { ativo: false } as Awaited<ReturnType<typeof prisma.unidade.findUnique>>,
+    );
+
+    const result = await criarMovimentacao({
+      tomboIds: ["t1"],
+      unidadeDestinoId: "u-destino",
+      setorDestinoId: "s-destino",
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: "Unidade de destino inativa. Não é possível registrar movimentações para esta unidade.",
+    });
+    expect(prisma.movimentacao.create).not.toHaveBeenCalled();
+  });
+
   it("deve bloquear quando algum tombo já possui movimentação em andamento", async () => {
     vi.mocked(prisma.tombo.findMany).mockResolvedValue([
       {
@@ -66,6 +95,10 @@ describe("criarMovimentacao", () => {
         unidadeId: "u-origem",
       },
     ] as Awaited<ReturnType<typeof prisma.tombo.findMany>>);
+
+    vi.mocked(prisma.unidade.findUnique).mockResolvedValue(
+      { ativo: true } as Awaited<ReturnType<typeof prisma.unidade.findUnique>>,
+    );
 
     vi.mocked(prisma.itemMovimentacao.findMany).mockResolvedValue([
       {
@@ -96,6 +129,10 @@ describe("criarMovimentacao", () => {
         unidadeId: "u-origem",
       },
     ] as Awaited<ReturnType<typeof prisma.tombo.findMany>>);
+
+    vi.mocked(prisma.unidade.findUnique).mockResolvedValue(
+      { ativo: true } as Awaited<ReturnType<typeof prisma.unidade.findUnique>>,
+    );
 
     vi.mocked(prisma.itemMovimentacao.findMany).mockResolvedValue(
       [] as Awaited<ReturnType<typeof prisma.itemMovimentacao.findMany>>,

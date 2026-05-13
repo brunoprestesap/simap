@@ -40,6 +40,13 @@ export interface SicamTombo {
   descLotacao: string | null;
   /** Sigla da lotação, vinda de SARH.RH_LOTACAO.LOTA_SIGLA_LOTACAO. */
   siglaLotacao: string | null;
+  /**
+   * Status da unidade no SARH:
+   * - `null`  → unidade não cadastrada no SARH (sem opinião)
+   * - `false` → cadastrada e ativa (LOTA_DAT_FIM IS NULL)
+   * - `true`  → cadastrada mas encerrada (LOTA_DAT_FIM IS NOT NULL)
+   */
+  sarhInativo: boolean | null;
 }
 
 interface SicamTomboRow {
@@ -59,6 +66,7 @@ interface SicamTomboRow {
   FG_ASSINADO: string | null;
   DESC_LOTACAO: string | null;
   SIGLA_LOTACAO: string | null;
+  SARH_INATIVO: 0 | 1 | null;
 }
 
 // Colunas selecionadas — ficam em uma constante porque são usadas em duas
@@ -83,7 +91,11 @@ const TOMBO_COLUMNS_SQL = `
   tr.DT_TERMO,
   tr.FG_ASSINADO,
   rl.LOTA_DSC_LOTACAO   AS DESC_LOTACAO,
-  rl.LOTA_SIGLA_LOTACAO AS SIGLA_LOTACAO
+  rl.LOTA_SIGLA_LOTACAO AS SIGLA_LOTACAO,
+  CASE WHEN rl.LOTA_COD_LOTACAO IS NOT NULL AND rl.LOTA_DAT_FIM IS NOT NULL THEN 1
+       WHEN rl.LOTA_COD_LOTACAO IS NOT NULL AND rl.LOTA_DAT_FIM IS NULL     THEN 0
+       ELSE NULL
+  END AS SARH_INATIVO
 `;
 
 function normalizeNumero(input: string | number): number {
@@ -118,6 +130,7 @@ function mapTomboRow(row: SicamTomboRow): SicamTombo {
     termoAssinado: row.FG_ASSINADO === "S",
     descLotacao: row.DESC_LOTACAO ?? null,
     siglaLotacao: row.SIGLA_LOTACAO ?? null,
+    sarhInativo: row.SARH_INATIVO === null ? null : row.SARH_INATIVO === 1,
   };
 }
 
@@ -159,7 +172,7 @@ export async function buscarTomboSicam(
         ON ps.CO_LOTA  = tr.CO_LOTA
        AND ps.CO_SETOR = tr.CO_SETOR
       LEFT JOIN (
-        SELECT LOTA_COD_LOTACAO, LOTA_DSC_LOTACAO, LOTA_SIGLA_LOTACAO,
+        SELECT LOTA_COD_LOTACAO, LOTA_DSC_LOTACAO, LOTA_SIGLA_LOTACAO, LOTA_DAT_FIM,
                ROW_NUMBER() OVER (PARTITION BY LOTA_COD_LOTACAO
                                  ORDER BY LOTA_DAT_FIM DESC NULLS FIRST) rn
         FROM SARH.RH_LOTACAO
@@ -393,7 +406,7 @@ export async function listarTodosTombosAtivos(
         ON ps.CO_LOTA  = tr.CO_LOTA
        AND ps.CO_SETOR = tr.CO_SETOR
       LEFT JOIN (
-        SELECT LOTA_COD_LOTACAO, LOTA_DSC_LOTACAO, LOTA_SIGLA_LOTACAO,
+        SELECT LOTA_COD_LOTACAO, LOTA_DSC_LOTACAO, LOTA_SIGLA_LOTACAO, LOTA_DAT_FIM,
                ROW_NUMBER() OVER (PARTITION BY LOTA_COD_LOTACAO
                                  ORDER BY LOTA_DAT_FIM DESC NULLS FIRST) rn
         FROM SARH.RH_LOTACAO
@@ -620,7 +633,7 @@ export async function listarTombosPorLotacao(
         ON ps.CO_LOTA  = tr.CO_LOTA
        AND ps.CO_SETOR = tr.CO_SETOR
       LEFT JOIN (
-        SELECT LOTA_COD_LOTACAO, LOTA_DSC_LOTACAO, LOTA_SIGLA_LOTACAO,
+        SELECT LOTA_COD_LOTACAO, LOTA_DSC_LOTACAO, LOTA_SIGLA_LOTACAO, LOTA_DAT_FIM,
                ROW_NUMBER() OVER (PARTITION BY LOTA_COD_LOTACAO
                                  ORDER BY LOTA_DAT_FIM DESC NULLS FIRST) rn
         FROM SARH.RH_LOTACAO

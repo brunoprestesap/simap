@@ -11,6 +11,7 @@ vi.mock("@/lib/prisma", () => ({
     unidade: {
       findMany: vi.fn(),
       create: vi.fn(),
+      updateMany: vi.fn(),
     },
     setor: {
       findMany: vi.fn(),
@@ -50,6 +51,7 @@ function tomboFixture(overrides: Partial<{
   nuTermo: number | null;
   descLotacao: string | null;
   siglaLotacao: string | null;
+  sarhInativo: boolean | null;
 }> = {}) {
   return {
     numero: overrides.numero ?? "12423",
@@ -68,6 +70,7 @@ function tomboFixture(overrides: Partial<{
     termoAssinado: true,
     descLotacao: overrides.descLotacao ?? null,
     siglaLotacao: overrides.siglaLotacao ?? null,
+    sarhInativo: overrides.sarhInativo !== undefined ? overrides.sarhInativo : null,
   };
 }
 
@@ -96,6 +99,7 @@ beforeEach(() => {
   vi.mocked(prisma.unidade.create).mockResolvedValue({
     id: "u-default",
   } as never);
+  vi.mocked(prisma.unidade.updateMany).mockResolvedValue({ count: 0 } as never);
   vi.mocked(prisma.setor.create).mockResolvedValue({
     id: "s-default",
   } as never);
@@ -172,6 +176,63 @@ describe("executarSincronizacaoSicam", () => {
       data: { codigo: "999", descricao: "999" },
       select: { id: true },
     });
+  });
+
+  it("cria Unidade com ativo=false quando sarhInativo=true (unidade encerrada no SARH)", async () => {
+    mockSync.mockResolvedValue(pageResult([tomboFixture({ codLotacao: 999, sarhInativo: true })]));
+    vi.mocked(prisma.unidade.create).mockResolvedValue({ id: "u-inativa" } as never);
+
+    await executarSincronizacaoSicam("user-id");
+
+    expect(prisma.unidade.create).toHaveBeenCalledWith({
+      data: { codigo: "999", descricao: "999", ativo: false },
+      select: { id: true },
+    });
+  });
+
+  it("não explicita ativo ao criar Unidade quando sarhInativo=null (sem registro SARH)", async () => {
+    mockSync.mockResolvedValue(pageResult([tomboFixture({ codLotacao: 999, sarhInativo: null })]));
+    vi.mocked(prisma.unidade.create).mockResolvedValue({ id: "u-sem-sarh" } as never);
+
+    await executarSincronizacaoSicam("user-id");
+
+    expect(prisma.unidade.create).toHaveBeenCalledWith({
+      data: { codigo: "999", descricao: "999" },
+      select: { id: true },
+    });
+  });
+
+  it("desativa Unidade existente via updateMany quando sarhInativo=true", async () => {
+    vi.mocked(prisma.unidade.findMany).mockResolvedValue([
+      { id: "u-encerrada", codigo: "348" },
+    ] as never);
+    mockSync.mockResolvedValue(pageResult([tomboFixture({ sarhInativo: true })]));
+
+    await executarSincronizacaoSicam("user-id");
+
+    expect(prisma.unidade.updateMany).toHaveBeenCalledWith({
+      where: { codigo: "348", ativo: true },
+      data: { ativo: false },
+    });
+  });
+
+  it("não chama updateMany para desativar quando sarhInativo=null ou false", async () => {
+    vi.mocked(prisma.unidade.findMany).mockResolvedValue([
+      { id: "u-ativa", codigo: "348" },
+    ] as never);
+    mockSync.mockResolvedValue(
+      pageResult([
+        tomboFixture({ numero: "1", sarhInativo: null }),
+        tomboFixture({ numero: "2", sarhInativo: false }),
+      ]),
+    );
+
+    await executarSincronizacaoSicam("user-id");
+
+    const desativacaoCalls = vi.mocked(prisma.unidade.updateMany).mock.calls.filter(
+      (call) => call[0].data && (call[0].data as Record<string, unknown>).ativo === false,
+    );
+    expect(desativacaoCalls).toHaveLength(0);
   });
 
   it("reutiliza Unidade do cache local em tombos subsequentes", async () => {

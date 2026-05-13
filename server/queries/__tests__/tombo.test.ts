@@ -229,6 +229,7 @@ describe("buscarTomboParaMovimentacao", () => {
         termoAssinado: true,
         descLotacao: null,
         siglaLotacao: null,
+        sarhInativo: null,
       },
       divergencias: [],
     });

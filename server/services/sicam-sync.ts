@@ -379,12 +379,17 @@ async function resolverLocalizacao(
 
   const codigoUnidade = String(tombo.codLotacao);
   const descricaoSarh = tombo.descLotacao ?? null;
+  // null = sem registro SARH (sem opinião); true = SARH ativa; false = SARH encerrada
+  const ativoSarh = tombo.sarhInativo === null ? null : !tombo.sarhInativo;
   let unidade = unidades.get(codigoUnidade);
   if (!unidade) {
     const criada = await prisma.unidade.create({
       data: {
         codigo: codigoUnidade,
         descricao: descricaoSarh ?? codigoUnidade,
+        // Força ativo:false quando SARH explicitamente encerrou a unidade.
+        // Sem registro SARH (null) → omite campo → default true do schema.
+        ...(ativoSarh === false ? { ativo: false } : {}),
       },
       select: { id: true },
     });
@@ -396,13 +401,23 @@ async function resolverLocalizacao(
     }
     unidade = criada;
     unidades.set(codigoUnidade, criada);
-  } else if (descricaoSarh) {
-    // Atualiza a descrição quando o SARH provê a versão longa e a unidade
-    // foi criada anteriormente só com o código numérico.
-    await prisma.unidade.updateMany({
-      where: { codigo: codigoUnidade, descricao: codigoUnidade },
-      data: { descricao: descricaoSarh },
-    });
+  } else {
+    // Atualiza descrição quando ainda está como código bruto.
+    if (descricaoSarh) {
+      await prisma.unidade.updateMany({
+        where: { codigo: codigoUnidade, descricao: codigoUnidade },
+        data: { descricao: descricaoSarh },
+      });
+    }
+    // Desativa quando SARH sinaliza encerramento. Nunca reativa automaticamente
+    // (reativação é decisão do admin). O filtro `ativo: true` no WHERE torna
+    // as execuções subsequentes para a mesma unidade no-ops sem custo extra.
+    if (ativoSarh === false) {
+      await prisma.unidade.updateMany({
+        where: { codigo: codigoUnidade, ativo: true },
+        data: { ativo: false },
+      });
+    }
   }
 
   if (tombo.codSetor === null) {

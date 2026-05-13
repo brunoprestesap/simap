@@ -55,6 +55,17 @@ export async function criarMovimentacao(input: CriarMovimentacaoInput): Promise<
     return { success: false, error: "A unidade de destino deve ser diferente da origem." };
   }
 
+  const unidadeDestino = await prisma.unidade.findUnique({
+    where: { id: unidadeDestinoId },
+    select: { ativo: true },
+  });
+  if (!unidadeDestino || !unidadeDestino.ativo) {
+    return {
+      success: false,
+      error: "Unidade de destino inativa. Não é possível registrar movimentações para esta unidade.",
+    };
+  }
+
   const tombosEmMovimentacao = await prisma.itemMovimentacao.findMany({
     where: {
       tomboId: { in: tomboIds },
