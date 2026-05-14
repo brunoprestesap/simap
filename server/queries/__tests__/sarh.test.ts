@@ -74,7 +74,7 @@ describe("buscarLotacaoAtualPorMatricula", () => {
   });
 
   it("retorna null e não lança quando Oracle está indisponível", async () => {
-    rejectWith(new SicamOracleError("ORA-12154: Cannot connect", 12154));
+    rejectWith(new SicamOracleError("ORA-12154: Cannot connect", { oraCode: 12154 }));
 
     await expect(buscarLotacaoAtualPorMatricula("AP20256")).resolves.toBeNull();
   });
