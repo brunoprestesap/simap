@@ -182,41 +182,46 @@ export function DashboardAuditoria() {
   }, [status, periodoInicio, periodoFim, unidadeId, responsavel, pagina]);
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2">
+    <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
+      <div className="mb-4 flex items-center gap-2">
         <h3 className="text-sm font-semibold text-foreground">
           Relatório de auditoria
         </h3>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowFilters(!showFilters)}
-          className="ml-auto"
-        >
-          <Filter className="h-4 w-4" data-icon="inline-start" />
-          Filtros
-        </Button>
-        {hasFilters && (
-          <Button variant="ghost" size="sm" onClick={clearAll}>
-            <X className="h-4 w-4" data-icon="inline-start" />
-            Limpar
-          </Button>
+        {total > 0 && (
+          <span className="text-xs text-muted-foreground">
+            {total} resultado{total !== 1 ? "s" : ""}
+          </span>
         )}
-        <span className="text-sm text-muted-foreground">
-          {total} resultado{total !== 1 ? "s" : ""}
-        </span>
+        <div className="ml-auto flex items-center gap-2">
+          {hasFilters && (
+            <Button variant="ghost" size="sm" onClick={clearAll}>
+              <X className="h-4 w-4" data-icon="inline-start" />
+              Limpar
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowFilters(!showFilters)}
+          >
+            <Filter className="h-4 w-4" data-icon="inline-start" />
+            Filtros
+          </Button>
+        </div>
       </div>
 
       {showFilters && (
-        <AuditoriaFilterPanel
-          status={status}
-          periodoInicio={periodoInicio}
-          periodoFim={periodoFim}
-          unidadeId={unidadeId}
-          responsavel={responsavel}
-          unidades={unidades}
-          onUpdate={updateParams}
-        />
+        <div className="mb-4">
+          <AuditoriaFilterPanel
+            status={status}
+            periodoInicio={periodoInicio}
+            periodoFim={periodoFim}
+            unidadeId={unidadeId}
+            responsavel={responsavel}
+            unidades={unidades}
+            onUpdate={updateParams}
+          />
+        </div>
       )}
 
       {isPending ? (

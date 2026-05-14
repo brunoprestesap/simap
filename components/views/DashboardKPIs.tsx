@@ -43,7 +43,6 @@ async function PendentesSicamKPI() {
       label="Pendentes de registro no SICAM"
       value={count}
       color="text-jf-warning"
-      borderColor="#D4A017"
       link={{ href: "/backlog?status=CONFIRMADA_ORIGEM", label: "Ver backlog" }}
     />
   );
@@ -56,7 +55,6 @@ async function PendentesConfirmacaoKPI() {
       label="Pendentes de confirmação"
       value={count}
       color="text-primary"
-      borderColor="#003366"
     />
   );
 }
