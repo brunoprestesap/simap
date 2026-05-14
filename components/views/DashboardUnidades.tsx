@@ -71,8 +71,8 @@ function UnidadesTable({ data }: { data: UnidadeDistribuicao[] }) {
           </tr>
         </thead>
         <tbody>
-          {data.map((row) => (
-            <tr key={row.unidadeId} className="border-b border-border last:border-0">
+          {data.map((row, i) => (
+            <tr key={row.unidadeId} className={`border-b border-border last:border-0 ${i % 2 === 1 ? "bg-muted/30" : ""}`}>
               <td className="px-3 py-2">{truncateLabel(row.unidadeDescricao)}</td>
               <td className="px-3 py-2 text-right font-medium">{row.total}</td>
               <td className="px-3 py-2 text-right text-jf-warning">{row.pendentes}</td>
@@ -89,7 +89,7 @@ function UnidadesTable({ data }: { data: UnidadeDistribuicao[] }) {
 export function DashboardUnidades() {
   const [data, setData] = useState<UnidadeDistribuicao[]>([]);
   const [isPending, startTransition] = useTransition();
-  const [view, setView] = useState<ViewMode>("chart");
+  const [view, setView] = useState<ViewMode>("table");
 
   useEffect(() => {
     startTransition(async () => {

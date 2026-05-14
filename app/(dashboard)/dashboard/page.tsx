@@ -10,20 +10,9 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-lg font-semibold text-foreground">
-          Dashboard gerencial
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          Visão geral das movimentações patrimoniais
-        </p>
-      </div>
-
-      {/* KPIs */}
       <DashboardKPIs />
 
-      {/* Charts row */}
-      <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
+      <div className="grid gap-6 grid-cols-1 lg:grid-cols-[2fr_1fr]">
         <Suspense
           fallback={
             <div className="h-80 animate-pulse rounded-lg border border-border bg-card" />
@@ -40,7 +29,6 @@ export default async function DashboardPage() {
         </Suspense>
       </div>
 
-      {/* Auditoria */}
       <Suspense
         fallback={
           <div className="h-64 animate-pulse rounded-lg border border-border bg-card" />

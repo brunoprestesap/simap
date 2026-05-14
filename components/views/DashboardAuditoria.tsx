@@ -39,7 +39,7 @@ function AuditoriaFilterPanel({
   onUpdate: (updates: Record<string, string>) => void;
 }) {
   return (
-    <div className="grid grid-cols-1 gap-3 rounded-lg border border-border bg-card p-4 sm:grid-cols-2 lg:grid-cols-5">
+    <div className="grid grid-cols-1 gap-3 rounded-lg border border-border/60 bg-muted/30 p-4 sm:grid-cols-2 lg:grid-cols-5">
       <FilterField label="Período início">
         <input type="date" value={periodoInicio} onChange={(e) => onUpdate({ inicio: e.target.value })} className="h-8 w-full rounded-md border border-border bg-background px-2 text-sm" />
       </FilterField>
@@ -151,7 +151,7 @@ export function DashboardAuditoria() {
   const [total, setTotal] = useState(0);
   const [totalPaginas, setTotalPaginas] = useState(0);
   const [unidades, setUnidades] = useState<Unidade[]>([]);
-  const [showFilters, setShowFilters] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
 
   const status = getParam("status") as StatusMovimentacao | "TODAS" | "";
   const periodoInicio = getParam("inicio");
