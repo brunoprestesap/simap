@@ -62,6 +62,8 @@ export function ResponsavelHome({
           </div>
         </HomePanel>
 
+        <MeusTombosCard initialData={meusTombosInicial} />
+
         <NotificationPreviewList
           title="Notificações"
           description="Avisos recentes ainda disponíveis para sua conta."
@@ -69,8 +71,6 @@ export function ResponsavelHome({
           unreadCount={data.notificacoesNaoLidas}
           action={{ href: "/notificacoes", label: "Ver todas" }}
         />
-
-        <MeusTombosCard initialData={meusTombosInicial} />
       </div>
     );
   }
@@ -91,6 +91,8 @@ export function ResponsavelHome({
           label: "Ver notificações",
         }}
       />
+
+      <MeusTombosCard initialData={meusTombosInicial} />
 
       <UnifiedKPIGrid
         items={[
@@ -193,8 +195,6 @@ export function ResponsavelHome({
           </HomePanel>
         </div>
       </div>
-
-      <MeusTombosCard initialData={meusTombosInicial} />
     </div>
   );
 }

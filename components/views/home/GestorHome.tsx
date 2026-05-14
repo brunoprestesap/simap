@@ -75,6 +75,8 @@ export function GestorHome({ firstName, data, meusTombosInicial }: GestorHomePro
         ]}
       />
 
+      <MeusTombosCard initialData={meusTombosInicial} />
+
       <HomeActionsGrid
         className="sm:grid-cols-2 xl:grid-cols-3"
         items={[
@@ -140,8 +142,6 @@ export function GestorHome({ firstName, data, meusTombosInicial }: GestorHomePro
           action={{ href: "/notificacoes", label: "Ver todas" }}
         />
       </div>
-
-      <MeusTombosCard initialData={meusTombosInicial} />
     </div>
   );
 }

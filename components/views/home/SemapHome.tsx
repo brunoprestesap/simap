@@ -69,6 +69,8 @@ export function SemapHome({ firstName, data, meusTombosInicial }: SemapHomeProps
         ]}
       />
 
+      <MeusTombosCard initialData={meusTombosInicial} />
+
       <HomeActionsGrid
         className="sm:grid-cols-2 xl:grid-cols-3"
         items={[
@@ -128,8 +130,6 @@ export function SemapHome({ firstName, data, meusTombosInicial }: SemapHomeProps
           />
         </div>
       </div>
-
-      <MeusTombosCard initialData={meusTombosInicial} />
     </div>
   );
 }

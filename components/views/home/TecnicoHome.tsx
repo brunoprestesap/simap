@@ -67,6 +67,8 @@ export function TecnicoHome({ firstName, data, meusTombosInicial }: TecnicoHomeP
         ]}
       />
 
+      <MeusTombosCard initialData={meusTombosInicial} />
+
       <HomeActionsGrid
         items={[
           {
@@ -119,8 +121,6 @@ export function TecnicoHome({ firstName, data, meusTombosInicial }: TecnicoHomeP
           />
         </div>
       </div>
-
-      <MeusTombosCard initialData={meusTombosInicial} />
     </div>
   );
 }

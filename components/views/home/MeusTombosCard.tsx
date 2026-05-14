@@ -2,11 +2,11 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { BookUser } from "lucide-react";
+import { BookUser, ChevronRight, Package } from "lucide-react";
 import { ListSkeleton } from "@/components/common/ListSkeleton";
 import { Pagination } from "@/components/common/Pagination";
 import { fetchMeusTombosPage } from "@/server/actions/tombo";
-import { HomeEmptyState, HomePanel } from "./shared";
+import { HomeEmptyState } from "./shared";
 import type { MeusTombosData } from "@/server/queries/tombo";
 
 interface MeusTombosCardProps {
@@ -25,10 +25,32 @@ export function MeusTombosCard({ initialData }: MeusTombosCardProps) {
   }
 
   return (
-    <HomePanel
-      title={`Meus tombos (${data.total} ${data.total === 1 ? "tombo" : "tombos"})`}
-      action={{ href: "/meus-tombos", label: "Ver todos" }}
-    >
+    <section className="rounded-xl border border-primary/25 bg-primary/5 p-4 md:p-5">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/15 text-primary">
+            <Package className="h-4 w-4" />
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-foreground">Meus tombos</h3>
+            <p className="text-xs text-muted-foreground">Patrimônios sob sua custódia</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <span className="rounded-full bg-primary px-2.5 py-0.5 text-xs font-semibold text-primary-foreground">
+            {data.total} {data.total === 1 ? "tombo" : "tombos"}
+          </span>
+          <Link
+            href="/meus-tombos"
+            className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+          >
+            Ver todos
+            <ChevronRight className="h-3 w-3" />
+          </Link>
+        </div>
+      </div>
+
       {isPending ? (
         <ListSkeleton count={5} height="h-14" />
       ) : data.tombos.length === 0 ? (
@@ -37,13 +59,13 @@ export function MeusTombosCard({ initialData }: MeusTombosCardProps) {
           message="Os bens vinculados à sua matrícula aparecerão aqui."
         />
       ) : (
-        <div className="flex flex-col">
+        <div className="overflow-hidden rounded-lg border border-border/60 bg-card">
           {data.tombos.map((tombo) => (
             <Link
               key={tombo.id}
               href={`/tombos/${tombo.id}`}
               aria-label={`Ver tombo #${tombo.numero} – ${tombo.descricaoMaterial}`}
-              className="group -mx-4 flex items-start justify-between gap-3 border-b border-border px-4 py-3 last:border-0 transition-colors hover:bg-muted/30"
+              className="group flex items-start justify-between gap-3 border-b border-border/60 px-4 py-3 last:border-0 transition-colors hover:bg-primary/5"
             >
               <div className="min-w-0 flex-1">
                 <p className="font-mono text-sm font-bold text-primary">
@@ -72,6 +94,6 @@ export function MeusTombosCard({ initialData }: MeusTombosCardProps) {
         onPageChange={handlePageChange}
         mobileLoadMore
       />
-    </HomePanel>
+    </section>
   );
 }
