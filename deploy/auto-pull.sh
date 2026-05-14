@@ -6,11 +6,19 @@ set -euo pipefail
 
 STACK_DIR="/opt/simap"
 COMPOSE_FILE="deploy/docker-compose.prod.yml"
+ENV_FILE="/opt/simap/.env"
 IMAGE="ghcr.io/brunoprestesap/simap:latest"
 LOG="/opt/simap/deploy/autodeploy.log"
 LOCK="/tmp/simap-deploy.lock"
 
 export GHCR_IMAGE="brunoprestesap/simap"
+
+# Carrega variaveis do .env para que ${POSTGRES_USER} etc. sejam substituidos
+# corretamente pelo docker compose ao montar DATABASE_URL no bloco environment:.
+# Sem isso, 'docker compose -f deploy/...' procura .env em deploy/ (inexistente)
+# e as variaveis ficam vazias, quebrando a URL de conexao nas migrations.
+# shellcheck source=/dev/null
+[ -f "$ENV_FILE" ] && set -a && source "$ENV_FILE" && set +a
 
 # Impede execucoes concorrentes (ex: deploy demorado + proximo tick do cron)
 exec 9>"$LOCK"
