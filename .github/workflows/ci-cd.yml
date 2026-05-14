@@ -85,6 +85,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: image
     environment: production
+    # Deploy via SSH falha quando o runner nao tem rota para a VPS interna (172.18.x.x).
+    # O deploy real e feito por pull-based (deploy/auto-pull.sh via cron na VPS).
+    continue-on-error: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4

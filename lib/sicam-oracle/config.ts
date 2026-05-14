@@ -113,19 +113,27 @@ export function getSicamOracleConfig(): SicamOracleConfig | null {
   };
 }
 
-export function describeSicamOracleConfigForUi(): {
-  configured: boolean;
-  user?: string;
-  connectString?: string;
-  poolMin?: number;
-  poolMax?: number;
-  schemaOwner?: string | null;
-  driverMode?: "thin" | "thick";
-  instantClientDir?: string | null;
-  configDir?: string | null;
-} {
+export function describeSicamOracleConfigForUi():
+  | { configured: false; missingVars: string[] }
+  | {
+      configured: true;
+      user: string;
+      connectString: string;
+      poolMin: number;
+      poolMax: number;
+      schemaOwner: string | null;
+      driverMode: "thin" | "thick";
+      instantClientDir: string | null;
+      configDir: string | null;
+    } {
   const cfg = getSicamOracleConfig();
-  if (!cfg) return { configured: false };
+  if (!cfg) {
+    const missingVars: string[] = [];
+    if (!process.env.SICAM_ORACLE_USER?.trim()) missingVars.push("SICAM_ORACLE_USER");
+    if (!process.env.SICAM_ORACLE_PASSWORD) missingVars.push("SICAM_ORACLE_PASSWORD");
+    if (!process.env.SICAM_ORACLE_CONNECT_STRING?.trim()) missingVars.push("SICAM_ORACLE_CONNECT_STRING");
+    return { configured: false, missingVars };
+  }
   return {
     configured: true,
     user: cfg.user,

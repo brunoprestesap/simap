@@ -15,8 +15,6 @@ require_env() {
   fi
 }
 
-require_env GHCR_USER
-require_env GHCR_TOKEN
 require_env GHCR_IMAGE
 require_env APP_DOMAIN
 
@@ -42,8 +40,11 @@ fi
 echo "Gerando configuracao do Nginx para dominio ${APP_DOMAIN}..."
 sed "s|\${APP_DOMAIN}|${APP_DOMAIN}|g" deploy/nginx.conf.template > deploy/nginx.conf
 
-echo "Autenticando no GHCR..."
-echo "${GHCR_TOKEN}" | docker login ghcr.io -u "${GHCR_USER}" --password-stdin
+# Login opcional — imagem GHCR e publica; necessario apenas para repos privados
+if [[ -n "${GHCR_USER:-}" ]] && [[ -n "${GHCR_TOKEN:-}" ]]; then
+  echo "Autenticando no GHCR..."
+  echo "${GHCR_TOKEN}" | docker login ghcr.io -u "${GHCR_USER}" --password-stdin
+fi
 
 echo "Atualizando imagem da aplicacao..."
 docker compose -f "${COMPOSE_FILE}" pull "${APP_SERVICE}"

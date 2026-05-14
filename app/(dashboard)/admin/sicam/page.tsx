@@ -52,7 +52,7 @@ export default async function SicamAdminPage({
   const configSummary = describeSicamOracleConfigForUi();
 
   if (!configSummary.configured) {
-    return <NotConfiguredState />;
+    return <NotConfiguredState missingVars={configSummary.missingVars} />;
   }
 
   // Probe + listagem + histórico em paralelo. Erros de listagem viram array vazio +
@@ -131,22 +131,41 @@ async function safeDescribeObject(
   }
 }
 
-function NotConfiguredState() {
+function NotConfiguredState({ missingVars }: { missingVars: string[] }) {
+  const allVars = ["SICAM_ORACLE_USER", "SICAM_ORACLE_PASSWORD", "SICAM_ORACLE_CONNECT_STRING"];
   return (
     <div className="rounded-xl border border-border bg-card p-6">
       <div className="flex items-start gap-3">
         <Database className="mt-0.5 h-5 w-5 text-muted-foreground" />
-        <div>
+        <div className="min-w-0 flex-1">
           <h3 className="text-base font-semibold text-foreground">
             SICAM Oracle não configurado
           </h3>
           <p className="mt-1 text-sm text-muted-foreground">
-            Defina as variáveis de ambiente <code>SICAM_ORACLE_USER</code>,{" "}
-            <code>SICAM_ORACLE_PASSWORD</code> e{" "}
-            <code>SICAM_ORACLE_CONNECT_STRING</code> em{" "}
-            <code>.env.local</code> e reinicie a aplicação.
+            Defina as variáveis de ambiente abaixo no secret{" "}
+            <code>APP_ENV_FILE</code> (GitHub Actions) e faça um novo deploy.
           </p>
-          <p className="mt-2 text-xs text-muted-foreground">
+          <ul className="mt-3 space-y-1.5">
+            {allVars.map((v) => {
+              const missing = missingVars.includes(v);
+              return (
+                <li key={v} className="flex items-center gap-2 text-xs">
+                  {missing ? (
+                    <XCircle className="h-3.5 w-3.5 shrink-0 text-destructive" />
+                  ) : (
+                    <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-jf-green" />
+                  )}
+                  <code className={missing ? "text-destructive" : "text-foreground"}>
+                    {v}
+                  </code>
+                  {missing && (
+                    <span className="text-muted-foreground">— ausente</span>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+          <p className="mt-3 text-xs text-muted-foreground">
             Formato Easy Connect:{" "}
             <code>host:porta/servicename</code> — opcionalmente defina{" "}
             <code>SICAM_ORACLE_SCHEMA_OWNER</code> para filtrar as tabelas
@@ -163,7 +182,7 @@ function ConnectionStatusCard({
   config,
 }: {
   health: SicamHealth;
-  config: ReturnType<typeof describeSicamOracleConfigForUi>;
+  config: Extract<ReturnType<typeof describeSicamOracleConfigForUi>, { configured: true }>;
 }) {
   const ok = health.ok;
   return (
