@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { formatDateTimeBR } from "@/lib/format";
 import type { getTecnicoHomeData } from "@/server/queries/home";
+import type { MeusTombosData } from "@/server/queries/tombo";
 import {
   HomeActionsGrid,
   HomeHero,
@@ -12,15 +13,17 @@ import {
   NotificationPreviewList,
   UnifiedKPIGrid,
 } from "./shared";
+import { MeusTombosCard } from "./MeusTombosCard";
 
 type TecnicoHomeData = Awaited<ReturnType<typeof getTecnicoHomeData>>;
 
 interface TecnicoHomeProps {
   firstName: string;
   data: TecnicoHomeData;
+  meusTombosInicial: MeusTombosData;
 }
 
-export function TecnicoHome({ firstName, data }: TecnicoHomeProps) {
+export function TecnicoHome({ firstName, data, meusTombosInicial }: TecnicoHomeProps) {
   return (
     <div className="space-y-8">
       <HomeHero
@@ -116,6 +119,8 @@ export function TecnicoHome({ firstName, data }: TecnicoHomeProps) {
           />
         </div>
       </div>
+
+      <MeusTombosCard initialData={meusTombosInicial} />
     </div>
   );
 }

@@ -9,6 +9,7 @@ import {
   getSemapHomeData,
   getTecnicoHomeData,
 } from "@/server/queries/home";
+import { listarMeusTombos } from "@/server/queries/tombo";
 
 function getFirstName(nome: string) {
   return nome.trim().split(/\s+/)[0] || nome;
@@ -20,25 +21,66 @@ export default async function HomePage() {
   const { id: userId, matricula, nome, perfil } = user;
   const firstName = getFirstName(nome);
 
+  const meusTombosPromise = listarMeusTombos(userId, matricula, {
+    pagina: 1,
+    porPagina: 5,
+  });
+
   switch (perfil) {
     case "TECNICO_TI": {
-      const data = await getTecnicoHomeData(userId);
-      return <TecnicoHome firstName={firstName} data={data} />;
+      const [data, meusTombosInicial] = await Promise.all([
+        getTecnicoHomeData(userId),
+        meusTombosPromise,
+      ]);
+      return (
+        <TecnicoHome
+          firstName={firstName}
+          data={data}
+          meusTombosInicial={meusTombosInicial}
+        />
+      );
     }
 
     case "SERVIDOR_RESPONSAVEL": {
-      const data = await getResponsavelHomeData(userId, matricula);
-      return <ResponsavelHome firstName={firstName} data={data} />;
+      const [data, meusTombosInicial] = await Promise.all([
+        getResponsavelHomeData(userId, matricula),
+        meusTombosPromise,
+      ]);
+      return (
+        <ResponsavelHome
+          firstName={firstName}
+          data={data}
+          meusTombosInicial={meusTombosInicial}
+        />
+      );
     }
 
     case "SERVIDOR_SEMAP": {
-      const data = await getSemapHomeData(userId);
-      return <SemapHome firstName={firstName} data={data} />;
+      const [data, meusTombosInicial] = await Promise.all([
+        getSemapHomeData(userId),
+        meusTombosPromise,
+      ]);
+      return (
+        <SemapHome
+          firstName={firstName}
+          data={data}
+          meusTombosInicial={meusTombosInicial}
+        />
+      );
     }
 
     case "GESTOR_ADMIN": {
-      const data = await getGestorHomeData(userId);
-      return <GestorHome firstName={firstName} data={data} />;
+      const [data, meusTombosInicial] = await Promise.all([
+        getGestorHomeData(userId),
+        meusTombosPromise,
+      ]);
+      return (
+        <GestorHome
+          firstName={firstName}
+          data={data}
+          meusTombosInicial={meusTombosInicial}
+        />
+      );
     }
   }
 

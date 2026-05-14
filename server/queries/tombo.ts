@@ -136,6 +136,75 @@ export async function listarSetoresPorUnidade(unidadeId: string) {
   });
 }
 
+interface MeusTombosFilters {
+  busca?: string;
+  pagina?: number;
+  porPagina?: number;
+}
+
+export async function listarMeusTombos(
+  userId: string,
+  matricula: string,
+  filters: MeusTombosFilters = {},
+) {
+  const { busca, pagina = 1, porPagina = 20 } = filters;
+
+  const responsabilidadeClause = {
+    OR: [
+      { usuarioResponsavelId: userId },
+      { matriculaResponsavel: matricula, ativo: true },
+    ],
+  };
+
+  // Quando há busca textual, envolve ambos os OR em AND para evitar que o
+  // Prisma achate os arrays num único OR de nível superior, o que retornaria
+  // tombos de outros responsáveis que batem apenas no texto.
+  const where = busca
+    ? {
+        AND: [
+          responsabilidadeClause,
+          {
+            OR: [
+              { numero: { contains: busca, mode: "insensitive" as const } },
+              {
+                descricaoMaterial: {
+                  contains: busca,
+                  mode: "insensitive" as const,
+                },
+              },
+            ],
+          },
+        ],
+      }
+    : responsabilidadeClause;
+
+  const skip = (pagina - 1) * porPagina;
+
+  const [tombos, total] = await Promise.all([
+    prisma.tombo.findMany({
+      where,
+      orderBy: { numero: "asc" },
+      skip,
+      take: porPagina,
+      include: {
+        unidade: { select: { id: true, codigo: true, descricao: true } },
+        setor: { select: { id: true, nome: true } },
+        usuarioResponsavel: usuarioResponsavelSelect,
+      },
+    }),
+    prisma.tombo.count({ where }),
+  ]);
+
+  return {
+    tombos,
+    total,
+    totalPaginas: Math.ceil(total / porPagina),
+    paginaAtual: pagina,
+  };
+}
+
+export type MeusTombosData = Awaited<ReturnType<typeof listarMeusTombos>>;
+
 const tomboMovimentacaoInclude = {
   unidade: { select: { id: true, codigo: true, descricao: true } },
   setor: { select: { id: true, codigo: true, nome: true } },

@@ -13,6 +13,7 @@ import {
   ClipboardList,
   Settings,
   BarChart3,
+  BookUser,
 } from "lucide-react";
 import type { NavItem } from "@/lib/types";
 
@@ -27,6 +28,7 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   ClipboardList,
   Settings,
   BarChart3,
+  BookUser,
 };
 
 interface BottomNavProps {

@@ -9,6 +9,7 @@ import {
 import { formatDateTimeBR } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { getGestorHomeData } from "@/server/queries/home";
+import type { MeusTombosData } from "@/server/queries/tombo";
 import {
   HomeActionsGrid,
   HomeHero,
@@ -19,15 +20,17 @@ import {
   formatTempoMedioDias,
   UnifiedKPIGrid,
 } from "./shared";
+import { MeusTombosCard } from "./MeusTombosCard";
 
 type GestorHomeData = Awaited<ReturnType<typeof getGestorHomeData>>;
 
 interface GestorHomeProps {
   firstName: string;
   data: GestorHomeData;
+  meusTombosInicial: MeusTombosData;
 }
 
-export function GestorHome({ firstName, data }: GestorHomeProps) {
+export function GestorHome({ firstName, data, meusTombosInicial }: GestorHomeProps) {
   return (
     <div className="space-y-8">
       <HomeHero
@@ -180,6 +183,8 @@ export function GestorHome({ firstName, data }: GestorHomeProps) {
           </HomePanel>
         </div>
       </div>
+
+      <MeusTombosCard initialData={meusTombosInicial} />
     </div>
   );
 }

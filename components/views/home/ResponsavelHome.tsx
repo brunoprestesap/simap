@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { formatDateTimeBR } from "@/lib/format";
 import type { getResponsavelHomeData } from "@/server/queries/home";
+import type { MeusTombosData } from "@/server/queries/tombo";
 import {
   HomeActionsGrid,
   HomeHero,
@@ -14,17 +15,20 @@ import {
   NotificationPreviewList,
   UnifiedKPIGrid,
 } from "./shared";
+import { MeusTombosCard } from "./MeusTombosCard";
 
 type ResponsavelHomeData = Awaited<ReturnType<typeof getResponsavelHomeData>>;
 
 interface ResponsavelHomeProps {
   firstName: string;
   data: ResponsavelHomeData;
+  meusTombosInicial: MeusTombosData;
 }
 
 export function ResponsavelHome({
   firstName,
   data,
+  meusTombosInicial,
 }: ResponsavelHomeProps) {
   if (!data.lotacao) {
     return (
@@ -65,6 +69,8 @@ export function ResponsavelHome({
           unreadCount={data.notificacoesNaoLidas}
           action={{ href: "/notificacoes", label: "Ver todas" }}
         />
+
+        <MeusTombosCard initialData={meusTombosInicial} />
       </div>
     );
   }
@@ -187,6 +193,8 @@ export function ResponsavelHome({
           </HomePanel>
         </div>
       </div>
+
+      <MeusTombosCard initialData={meusTombosInicial} />
     </div>
   );
 }

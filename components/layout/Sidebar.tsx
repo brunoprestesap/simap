@@ -15,6 +15,7 @@ import {
   ClipboardList,
   Settings,
   BarChart3,
+  BookUser,
   PanelLeftClose,
   PanelLeft,
 } from "lucide-react";
@@ -32,6 +33,7 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   ClipboardList,
   Settings,
   BarChart3,
+  BookUser,
 };
 
 interface SidebarProps {

@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { formatDateTimeBR } from "@/lib/format";
 import type { getSemapHomeData } from "@/server/queries/home";
+import type { MeusTombosData } from "@/server/queries/tombo";
 import {
   HomeActionsGrid,
   HomeHero,
@@ -13,15 +14,17 @@ import {
   formatTempoMedioDias,
   UnifiedKPIGrid,
 } from "./shared";
+import { MeusTombosCard } from "./MeusTombosCard";
 
 type SemapHomeData = Awaited<ReturnType<typeof getSemapHomeData>>;
 
 interface SemapHomeProps {
   firstName: string;
   data: SemapHomeData;
+  meusTombosInicial: MeusTombosData;
 }
 
-export function SemapHome({ firstName, data }: SemapHomeProps) {
+export function SemapHome({ firstName, data, meusTombosInicial }: SemapHomeProps) {
   return (
     <div className="space-y-8">
       <HomeHero
@@ -125,6 +128,8 @@ export function SemapHome({ firstName, data }: SemapHomeProps) {
           />
         </div>
       </div>
+
+      <MeusTombosCard initialData={meusTombosInicial} />
     </div>
   );
 }
