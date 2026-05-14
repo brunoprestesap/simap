@@ -13,6 +13,7 @@ import {
 import { authLogger } from "@/lib/logger";
 import { consumeAttempt, resetAttempts } from "@/lib/rate-limit";
 import { revalidateJwtToken } from "@/lib/auth-jwt-callback";
+import { buscarLotacaoAtualPorMatricula } from "@/server/queries/sarh";
 export { getHomeByPerfil } from "@/lib/profile-home";
 
 class RateLimitError extends CredentialsSignin {
@@ -153,6 +154,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             const nome = ldapDisplayName?.trim() || matricula;
             const perfil = getLdapDefaultProvisionPerfil();
 
+            // Tenta obter a lotação atual do SARH para auto-atribuir a unidade.
+            // Fire-and-forget para falhas de Oracle — nunca bloqueia o login.
+            const lotacaoSarh = await buscarLotacaoAtualPorMatricula(matricula);
+            let unidadeIdProvisao: string | undefined;
+            if (lotacaoSarh) {
+              const unidade = await prisma.unidade.findFirst({
+                where: { codigo: String(lotacaoSarh.codLotacao), ativo: true },
+                select: { id: true },
+              });
+              unidadeIdProvisao = unidade?.id;
+            }
+
             try {
               usuario = await prisma.usuario.create({
                 data: {
@@ -160,10 +173,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                   nome,
                   perfil,
                   ativo: true,
+                  ...(unidadeIdProvisao ? { unidadeId: unidadeIdProvisao } : {}),
                 },
               });
               authLogger.info(
-                { matricula, perfil },
+                { matricula, perfil, unidadeId: unidadeIdProvisao ?? null },
                 "usuario provisionado no primeiro login",
               );
             } catch (e) {

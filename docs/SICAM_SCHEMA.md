@@ -401,6 +401,50 @@ Sub-lotes de 100 por roundtrip (limite IN clause Oracle ORA-01795). Implementado
 
 `HistoricoTermoSicam` com chave única `@@unique([tomboId, dtTransferencia])` — cada evento de transferência é identificado pelo tombo + data. Sync faz upsert via essa chave.
 
+---
+
+## SARH — Lotação atual do servidor
+
+### `SARH.RH_FUNCIONARIO` — registro mestre do servidor (fonte para provisionamento)
+
+Tabela principal de funcionários no SARH. Consultada no primeiro login via LDAP para auto-atribuir `unidadeId` ao novo `Usuario`.
+
+| # | Coluna | Tipo | Uso |
+|---|---|---|---|
+| 1 | `FUNC_COD_FUNCIONARIO` | NUMBER | PK — equivale à parte numérica da matrícula JFAP (ex: 20256 para "AP20256") |
+| 2 | `FUNC_MATRICULA_FOLHA` | VARCHAR2(12) | Matrícula no formato JFAP ("AP20256") — **campo de join por matrícula** |
+| 3 | `FUNC_LOTA_COD_LOTACAO` | NUMBER | Lotação atual do servidor → JOIN com `RH_LOTACAO.LOTA_COD_LOTACAO` |
+| 4 | `FUNC_E_MAIL` | VARCHAR2 | Email institucional (ex: "AP20256@TRF1.JUS.BR") |
+
+**Por que esta tabela e não `SERV_LOTACAO`:** `SERV_LOTACAO` acumula linhas sem `DT_SAIDA` (múltiplas entradas "ativas" para o mesmo servidor). `RH_FUNCIONARIO.FUNC_LOTA_COD_LOTACAO` é o campo mestre atualizado diretamente pelo RH — uma linha por servidor.
+
+**Query usada em `server/queries/sarh.ts`:**
+```sql
+SELECT f.FUNC_LOTA_COD_LOTACAO AS COD_LOTA,
+       rl.LOTA_DSC_LOTACAO     AS DESC_LOTA,
+       rl.LOTA_SIGLA_LOTACAO   AS SIGLA_LOTA
+  FROM SARH.RH_FUNCIONARIO f
+  LEFT JOIN SARH.RH_LOTACAO rl
+         ON rl.LOTA_COD_LOTACAO = f.FUNC_LOTA_COD_LOTACAO
+        AND rl.LOTA_DAT_FIM IS NULL
+ WHERE UPPER(f.FUNC_MATRICULA_FOLHA) = UPPER(:matricula)
+   AND f.FUNC_LOTA_COD_LOTACAO IS NOT NULL
+ FETCH FIRST 1 ROW ONLY
+```
+
+**Validado (2026-05-14) para AP20256:** `FUNC_LOTA_COD_LOTACAO = 460` → SETSIS (SETOR DE SUPORTE AO USUÁRIO E A SISTEMAS DE TI).
+
+### Outras tabelas SARH relevantes (encontradas no schema, não usadas pelo SIMAP)
+
+| Tabela | Uso |
+|---|---|
+| `SARH.SERV_LOTACAO` | Histórico de lotações (`DT_ENTRADA`, `DT_SAIDA`). Problemas de qualidade: entradas sem `DT_SAIDA` (múltiplos "ativos"). |
+| `SARH.SERV_LOCALIZACAO` | Localização atual por matrícula JFAP. Sem datas; pode ter múltiplas linhas por servidor. |
+| `SARH.RH_LOCALIZACAO` | Localização com datas; matrícula numérica (sem prefixo "AP"). Apenas 350 registros ativos. |
+| `SARH.VW_RELACAO_PESSOAS` | View rica com `MATRICULA`, `LOTACAO_SERVIDOR`, `TIPO_PESSOA`, `DESLIGAMENTO`. Inclui estagiários. |
+
+---
+
 ### Resultado da validação end-to-end (2026-05-12)
 
 **Contagem real (COUNT, não estatísticas Oracle):**
