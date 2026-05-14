@@ -1,5 +1,6 @@
 import { requireAuth } from "@/lib/auth-guard";
 import { MeusTombosList } from "@/components/views/MeusTombosList";
+import { EmptyState } from "@/components/common/EmptyState";
 
 export default async function MeusTombosPage() {
   const user = await requireAuth();
@@ -12,7 +13,14 @@ export default async function MeusTombosPage() {
           Bens patrimoniais vinculados à sua matrícula
         </p>
       </div>
-      <MeusTombosList userId={user.id} matricula={user.matricula} />
+      {user.matricula ? (
+        <MeusTombosList userId={user.id} matricula={user.matricula} />
+      ) : (
+        <EmptyState
+          titulo="Matrícula não cadastrada"
+          mensagem="Seu usuário não possui matrícula vinculada. Contate o administrador do sistema."
+        />
+      )}
     </div>
   );
 }

@@ -11,6 +11,8 @@ import { useDebouncedCallback } from "@/lib/hooks/use-debounced-callback";
 import { listarMeusTombos } from "@/server/queries/tombo";
 import { nomeResponsavelExibicao } from "@/lib/tombo-responsavel";
 
+const MEUS_TOMBOS_LIST_PAGE_SIZE = 20;
+
 type MeusTomboItem = Awaited<ReturnType<typeof listarMeusTombos>>["tombos"][number];
 
 interface MeusTombosListProps {
@@ -18,12 +20,13 @@ interface MeusTombosListProps {
   matricula: string;
 }
 
-function TomboCard({ tombo }: { tombo: MeusTomboItem }) {
+function MeusTomboCard({ tombo }: { tombo: MeusTomboItem }) {
   const responsavel = nomeResponsavelExibicao(tombo);
 
   return (
     <Link
       href={`/tombos/${tombo.id}`}
+      aria-label={`Ver tombo #${tombo.numero} – ${tombo.descricaoMaterial}`}
       className="block rounded-lg border border-border bg-card p-4 transition-colors hover:bg-muted/30"
     >
       <div className="flex items-start justify-between gap-2">
@@ -39,7 +42,7 @@ function TomboCard({ tombo }: { tombo: MeusTomboItem }) {
   );
 }
 
-function TomboRow({ tombo }: { tombo: MeusTomboItem }) {
+function MeusTomboRow({ tombo }: { tombo: MeusTomboItem }) {
   const responsavel = nomeResponsavelExibicao(tombo);
 
   return (
@@ -47,6 +50,7 @@ function TomboRow({ tombo }: { tombo: MeusTomboItem }) {
       <td className="py-3 pr-4">
         <Link
           href={`/tombos/${tombo.id}`}
+          aria-label={`Ver tombo #${tombo.numero}`}
           className="font-mono text-sm font-bold text-primary hover:underline"
         >
           #{tombo.numero}
@@ -76,6 +80,7 @@ export function MeusTombosList({ userId, matricula }: MeusTombosListProps) {
   const [tombos, setTombos] = useState<MeusTomboItem[]>([]);
   const [total, setTotal] = useState(0);
   const [totalPaginas, setTotalPaginas] = useState(0);
+  const [error, setError] = useState<string | null>(null);
 
   const busca = searchParams.get("busca") || "";
   const pagina = Number(searchParams.get("pagina")) || 1;
@@ -86,14 +91,19 @@ export function MeusTombosList({ userId, matricula }: MeusTombosListProps) {
 
   useEffect(() => {
     startTransition(async () => {
-      const result = await listarMeusTombos(userId, matricula, {
-        busca: busca || undefined,
-        pagina,
-        porPagina: 20,
-      });
-      setTombos(result.tombos);
-      setTotal(result.total);
-      setTotalPaginas(result.totalPaginas);
+      try {
+        const result = await listarMeusTombos(userId, matricula, {
+          busca: busca || undefined,
+          pagina,
+          porPagina: MEUS_TOMBOS_LIST_PAGE_SIZE,
+        });
+        setTombos(result.tombos);
+        setTotal(result.total);
+        setTotalPaginas(result.totalPaginas);
+        setError(null);
+      } catch {
+        setError("Não foi possível carregar os tombos. Tente novamente.");
+      }
     });
   }, [userId, matricula, busca, pagina]);
 
@@ -111,13 +121,13 @@ export function MeusTombosList({ userId, matricula }: MeusTombosListProps) {
         />
       </div>
 
-      {!isPending && (
-        <p className="text-sm text-muted-foreground">
-          {total} {total === 1 ? "tombo encontrado" : "tombos encontrados"}
-        </p>
-      )}
+      <p className="text-sm text-muted-foreground">
+        {total} {total === 1 ? "tombo encontrado" : "tombos encontrados"}
+      </p>
 
-      {isPending ? (
+      {error ? (
+        <p className="text-sm text-destructive">{error}</p>
+      ) : isPending ? (
         <ListSkeleton count={5} />
       ) : tombos.length === 0 ? (
         <EmptyState
@@ -133,7 +143,7 @@ export function MeusTombosList({ userId, matricula }: MeusTombosListProps) {
           {/* Mobile: cards */}
           <div className="space-y-3 md:hidden">
             {tombos.map((tombo) => (
-              <TomboCard key={tombo.id} tombo={tombo} />
+              <MeusTomboCard key={tombo.id} tombo={tombo} />
             ))}
           </div>
 
@@ -151,7 +161,7 @@ export function MeusTombosList({ userId, matricula }: MeusTombosListProps) {
               </thead>
               <tbody>
                 {tombos.map((tombo) => (
-                  <TomboRow key={tombo.id} tombo={tombo} />
+                  <MeusTomboRow key={tombo.id} tombo={tombo} />
                 ))}
               </tbody>
             </table>

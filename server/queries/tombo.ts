@@ -187,8 +187,8 @@ export async function listarMeusTombos(
       skip,
       take: porPagina,
       include: {
-        unidade: { select: { id: true, codigo: true, descricao: true } },
-        setor: { select: { id: true, nome: true } },
+        unidade: { select: { descricao: true } },
+        setor: { select: { nome: true } },
         usuarioResponsavel: usuarioResponsavelSelect,
       },
     }),

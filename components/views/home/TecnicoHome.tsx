@@ -25,7 +25,7 @@ interface TecnicoHomeProps {
 
 export function TecnicoHome({ firstName, data, meusTombosInicial }: TecnicoHomeProps) {
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <HomeHero
         perfil="TECNICO_TI"
         title={`Olá, ${firstName}`}

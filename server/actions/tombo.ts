@@ -3,6 +3,8 @@
 import { requireAuthAction } from "@/lib/auth-guard";
 import { listarMeusTombos } from "@/server/queries/tombo";
 
+const CARD_PAGE_SIZE = 5;
+
 export async function fetchMeusTombosPage(pagina: number) {
   const { user, error } = await requireAuthAction();
   if (error || !user) {
@@ -11,7 +13,7 @@ export async function fetchMeusTombosPage(pagina: number) {
 
   const data = await listarMeusTombos(user.id, user.matricula, {
     pagina,
-    porPagina: 5,
+    porPagina: CARD_PAGE_SIZE,
   });
 
   return { success: true as const, data };

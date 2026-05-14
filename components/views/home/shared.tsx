@@ -53,24 +53,17 @@ export function UnifiedKPIGrid({ items }: { items: UnifiedKPI[] }) {
 
 export function UnifiedKPICard({ label, value, tone = "default", href, actionLabel }: UnifiedKPI) {
   return (
-    <div className="flex flex-col justify-between rounded-xl border border-border bg-card p-5 shadow-sm transition-all hover:shadow-md">
-      <div>
-        <div className="flex items-center gap-2">
-          {tone !== "default" && (
-            <span className={cn("h-2 w-2 rounded-full", TONE_BG_COLORS[tone])} />
-          )}
-          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            {label}
-          </p>
-        </div>
-        <p className={cn("mt-3 text-3xl font-light tracking-tight", TONE_TEXT_COLORS[tone])}>
-          {value}
-        </p>
-      </div>
+    <div className="rounded-xl border border-border bg-card p-4 shadow-sm transition-all hover:shadow-md">
+      <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+        {label}
+      </p>
+      <p className={cn("mt-2 text-3xl font-semibold tracking-tight", TONE_TEXT_COLORS[tone])}>
+        {value}
+      </p>
       {href && actionLabel && (
         <Link
           href={href}
-          className="mt-4 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+          className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
         >
           {actionLabel}
           <ChevronRight className="h-3 w-3" />
@@ -132,6 +125,7 @@ interface HomeHeroProps {
 interface HomePanelProps {
   title: string;
   description?: string;
+  badge?: ReactNode;
   action?: {
     href: string;
     label: string;
@@ -173,54 +167,47 @@ export function HomeHero({
   const PrimaryIcon = primaryAction.icon;
 
   return (
-    <section className="py-2">
-      <div className="space-y-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <span
-            className={cn(
-              "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold",
-              PERFIL_COLORS[perfil],
-            )}
-          >
-            {PERFIL_LABELS[perfil]}
-          </span>
-        </div>
-
-        <div className="space-y-2">
-          <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-            {title}
-          </h2>
-          <p className="max-w-2xl text-base text-muted-foreground">
-            {description}
-          </p>
-        </div>
-
-        <div className="flex flex-col gap-3 pt-2 sm:flex-row">
-          <Link
-            href={primaryAction.href}
-            className={cn(HOME_PRIMARY_BUTTON, "w-full justify-center sm:w-auto")}
-          >
-            {PrimaryIcon && <PrimaryIcon className="h-4 w-4" data-icon="inline-start" />}
-            {primaryAction.label}
-          </Link>
-
-          {secondaryAction && (
-            <Link
-              href={secondaryAction.href}
-              className={cn(HOME_OUTLINE_BUTTON, "w-full justify-center sm:w-auto")}
-            >
-              {secondaryAction.label}
-            </Link>
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="min-w-0">
+        <span
+          className={cn(
+            "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold",
+            PERFIL_COLORS[perfil],
           )}
-        </div>
+        >
+          {PERFIL_LABELS[perfil]}
+        </span>
+        <h2 className="mt-1.5 text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+          {title}
+        </h2>
+        <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>
       </div>
-    </section>
+
+      <div className="flex shrink-0 flex-wrap gap-2">
+        <Link
+          href={primaryAction.href}
+          className={cn(HOME_PRIMARY_BUTTON, "whitespace-nowrap")}
+        >
+          {PrimaryIcon && <PrimaryIcon className="h-4 w-4" />}
+          {primaryAction.label}
+        </Link>
+        {secondaryAction && (
+          <Link
+            href={secondaryAction.href}
+            className={cn(HOME_OUTLINE_BUTTON, "whitespace-nowrap")}
+          >
+            {secondaryAction.label}
+          </Link>
+        )}
+      </div>
+    </div>
   );
 }
 
 export function HomePanel({
   title,
   description,
+  badge,
   action,
   children,
   className,
@@ -229,7 +216,10 @@ export function HomePanel({
     <section className={cn("rounded-lg border border-border bg-card p-4 md:p-5", className)}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
-          <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+            {badge}
+          </div>
           {description && (
             <p className="text-sm text-muted-foreground">{description}</p>
           )}
@@ -277,21 +267,19 @@ export function HomeActionCard({
   return (
     <Link
       href={href}
-      className="group rounded-xl border border-border bg-card p-5 transition-all hover:-translate-y-0.5 hover:shadow-md"
+      className="group rounded-xl border border-border bg-card p-4 transition-all hover:-translate-y-0.5 hover:shadow-md"
     >
-      <div className="flex items-start gap-4">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors">
-          <Icon className="h-6 w-6" />
+      <div className="flex items-start gap-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors">
+          <Icon className="h-5 w-5" />
         </div>
 
         <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-3">
-            <p className="text-base font-semibold text-foreground">{title}</p>
-          </div>
-          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+          <p className="text-sm font-semibold text-foreground">{title}</p>
+          <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
             {description}
           </p>
-          {meta && <p className="mt-3 text-xs text-muted-foreground">{meta}</p>}
+          {meta && <p className="mt-2 text-xs text-muted-foreground">{meta}</p>}
         </div>
       </div>
     </Link>
@@ -316,7 +304,7 @@ export function MovementPreviewList({
             <Link
               key={item.id}
               href={item.href}
-              className="group flex flex-col gap-3 border-b border-border py-4 last:border-0 sm:flex-row sm:items-start sm:justify-between transition-colors hover:bg-muted/20 -mx-4 px-4"
+              className="group flex flex-col gap-2 border-b border-border py-3.5 last:border-0 sm:flex-row sm:items-start sm:justify-between transition-colors hover:bg-muted/20 -mx-4 px-4"
             >
               <div className="min-w-0 flex-1">
                 {item.eyebrow && (
@@ -356,19 +344,18 @@ export function NotificationPreviewList({
   action,
 }: NotificationPreviewListProps) {
   return (
-    <HomePanel title={title} description={description} action={action}>
-      <div className="mb-4 flex items-center justify-between rounded-lg border border-border bg-background px-4 py-3">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            Não lidas
-          </p>
-          <p className="mt-1 text-xl font-light text-foreground">{unreadCount}</p>
-        </div>
-        <div className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-          Central ativa
-        </div>
-      </div>
-
+    <HomePanel
+      title={title}
+      description={description}
+      action={action}
+      badge={
+        unreadCount > 0 ? (
+          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+            {unreadCount} não {unreadCount === 1 ? "lida" : "lidas"}
+          </span>
+        ) : undefined
+      }
+    >
       {items.length === 0 ? (
         <HomeEmptyState
           title="Sem notificações recentes"
@@ -384,19 +371,19 @@ export function NotificationPreviewList({
                 key={item.id}
                 href={item.link || "/notificacoes"}
                 className={cn(
-                  "group flex items-start gap-4 border-b border-border py-4 last:border-0 transition-colors hover:bg-muted/20 -mx-4 px-4",
+                  "group flex items-start gap-3 border-b border-border py-3.5 last:border-0 transition-colors hover:bg-muted/20 -mx-4 px-4",
                   !item.lida && "bg-primary/5"
                 )}
               >
                 <div className={cn(
-                  "mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors",
+                  "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors",
                   !item.lida ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
                 )}>
-                  <Icon className="h-5 w-5" />
+                  <Icon className="h-4 w-4" />
                 </div>
 
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start justify-between gap-2">
                     <p
                       className={cn(
                         "text-sm group-hover:text-primary transition-colors",
@@ -409,10 +396,10 @@ export function NotificationPreviewList({
                       <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" />
                     )}
                   </div>
-                  <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                  <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
                     {item.mensagem}
                   </p>
-                  <p className="mt-2 text-xs text-muted-foreground">
+                  <p className="mt-1.5 text-xs text-muted-foreground">
                     {formatRelativeTime(item.createdAt)}
                   </p>
                 </div>

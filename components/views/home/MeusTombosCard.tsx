@@ -42,6 +42,7 @@ export function MeusTombosCard({ initialData }: MeusTombosCardProps) {
             <Link
               key={tombo.id}
               href={`/tombos/${tombo.id}`}
+              aria-label={`Ver tombo #${tombo.numero} – ${tombo.descricaoMaterial}`}
               className="group -mx-4 flex items-start justify-between gap-3 border-b border-border px-4 py-3 last:border-0 transition-colors hover:bg-muted/30"
             >
               <div className="min-w-0 flex-1">

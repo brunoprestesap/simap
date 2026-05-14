@@ -26,7 +26,7 @@ interface SemapHomeProps {
 
 export function SemapHome({ firstName, data, meusTombosInicial }: SemapHomeProps) {
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <HomeHero
         perfil="SERVIDOR_SEMAP"
         title={`Olá, ${firstName}`}

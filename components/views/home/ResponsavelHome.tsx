@@ -32,7 +32,7 @@ export function ResponsavelHome({
 }: ResponsavelHomeProps) {
   if (!data.lotacao) {
     return (
-      <div className="space-y-8">
+      <div className="space-y-6">
         <HomeHero
           perfil="SERVIDOR_RESPONSAVEL"
           title={`Olá, ${firstName}`}
@@ -76,7 +76,7 @@ export function ResponsavelHome({
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <HomeHero
         perfil="SERVIDOR_RESPONSAVEL"
         title={`Olá, ${firstName}`}

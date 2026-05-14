@@ -1,4 +1,3 @@
-import Link from "next/link";
 import {
   BarChart3,
   Bell,
@@ -7,14 +6,11 @@ import {
   Settings,
 } from "lucide-react";
 import { formatDateTimeBR } from "@/lib/format";
-import { cn } from "@/lib/utils";
 import type { getGestorHomeData } from "@/server/queries/home";
 import type { MeusTombosData } from "@/server/queries/tombo";
 import {
   HomeActionsGrid,
   HomeHero,
-  HOME_PRIMARY_BUTTON,
-  HomePanel,
   MovementPreviewList,
   NotificationPreviewList,
   formatTempoMedioDias,
@@ -32,7 +28,7 @@ interface GestorHomeProps {
 
 export function GestorHome({ firstName, data, meusTombosInicial }: GestorHomeProps) {
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <HomeHero
         perfil="GESTOR_ADMIN"
         title={`Olá, ${firstName}`}
@@ -136,52 +132,13 @@ export function GestorHome({ firstName, data, meusTombosInicial }: GestorHomePro
           action={{ href: "/movimentacao/historico", label: "Abrir histórico" }}
         />
 
-        <div className="space-y-6">
-          <NotificationPreviewList
-            title="Notificações"
-            description="Eventos recentes para acompanhamento gerencial."
-            items={data.notificacoes}
-            unreadCount={data.notificacoesNaoLidas}
-            action={{ href: "/notificacoes", label: "Ver todas" }}
-          />
-
-          <HomePanel
-            title="Visão executiva"
-            description="Atalhos recomendados para acompanhamento macro."
-          >
-            <div className="space-y-4">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-lg border border-border bg-background p-4">
-                  <p className="text-xs font-medium text-muted-foreground">
-                    Movimentações no período
-                  </p>
-                  <p className="mt-1 text-xl font-semibold text-foreground">
-                    {data.movimentacoes30Dias}
-                  </p>
-                </div>
-                <div className="rounded-lg border border-border bg-background p-4">
-                  <p className="text-xs font-medium text-muted-foreground">
-                    Unidades acompanhadas
-                  </p>
-                  <p className="mt-1 text-xl font-semibold text-foreground">
-                    {data.unidadesAtivas}
-                  </p>
-                </div>
-              </div>
-
-              <p className="text-sm leading-6 text-muted-foreground">
-                Use o dashboard para explorar tendências, gargalos de confirmação e distribuição por unidade com mais profundidade.
-              </p>
-
-              <Link
-                href="/dashboard"
-                className={cn(HOME_PRIMARY_BUTTON, "w-full justify-center")}
-              >
-                Abrir dashboard completo
-              </Link>
-            </div>
-          </HomePanel>
-        </div>
+        <NotificationPreviewList
+          title="Notificações"
+          description="Eventos recentes para acompanhamento gerencial."
+          items={data.notificacoes}
+          unreadCount={data.notificacoesNaoLidas}
+          action={{ href: "/notificacoes", label: "Ver todas" }}
+        />
       </div>
 
       <MeusTombosCard initialData={meusTombosInicial} />
