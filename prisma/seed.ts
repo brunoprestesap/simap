@@ -198,7 +198,7 @@ async function main() {
       unidadeOrigemId: vara1.id,
       unidadeDestinoId: vara2.id,
       tecnicoId: tecnico.id,
-      status: StatusMovimentacao.CONFIRMADA_ORIGEM,
+      status: StatusMovimentacao.CONFIRMADA_DESTINO,
       tokenExpiraEm: tokenExpiry,
       confirmadoEm: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000),
       confirmadoPorNome: "Roberto Oliveira",

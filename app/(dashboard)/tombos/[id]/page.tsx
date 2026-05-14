@@ -28,14 +28,14 @@ import type { ReactNode } from "react";
 
 const STATUS_LABEL: Record<string, string> = {
   PENDENTE_CONFIRMACAO: "Movimentação registrada",
-  CONFIRMADA_ORIGEM: "Confirmada na origem",
+  CONFIRMADA_DESTINO: "Recebimento confirmado pelo destino",
   REGISTRADA_SICAM: "Registrada no SICAM",
   NAO_CONFIRMADA: "Não confirmada",
 };
 
 const STATUS_DOT_COLOR: Record<string, string> = {
   PENDENTE_CONFIRMACAO: "bg-jf-warning",
-  CONFIRMADA_ORIGEM: "bg-primary",
+  CONFIRMADA_DESTINO: "bg-primary",
   REGISTRADA_SICAM: "bg-secondary",
   NAO_CONFIRMADA: "bg-destructive",
 };
@@ -77,22 +77,26 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 
 function HeroCard({
   tombo,
-  emMovimentacao,
+  statusMovimentacao,
 }: {
   tombo: TomboDetalhe;
-  emMovimentacao: boolean;
+  statusMovimentacao: "pendente" | "confirmado" | null;
 }) {
   const statusLabel = !tombo.ativo
     ? "Inativo"
-    : emMovimentacao
+    : statusMovimentacao === "pendente"
       ? "Em movimentação"
-      : "Ativo";
+      : statusMovimentacao === "confirmado"
+        ? "Aguardando SICAM"
+        : "Ativo";
 
   const statusClass = !tombo.ativo
     ? "bg-destructive/25 text-white"
-    : emMovimentacao
+    : statusMovimentacao === "pendente"
       ? "bg-jf-warning/30 text-white"
-      : "bg-white/20 text-white";
+      : statusMovimentacao === "confirmado"
+        ? "bg-primary/50 text-white"
+        : "bg-white/20 text-white";
 
   return (
     <div className="relative overflow-hidden rounded-2xl bg-primary p-5">
@@ -449,11 +453,15 @@ export default async function TomboDetalhePage({ params }: Props) {
     },
   });
 
-  const emMovimentacao = tombo.itensMovimentacao.some((item) =>
-    (MOVIMENTACAO_STATUS_EM_ANDAMENTO as readonly string[]).includes(
-      item.movimentacao.status,
-    ),
-  );
+  const statusMovimentacao = tombo.itensMovimentacao.some(
+    (item) => item.movimentacao.status === "PENDENTE_CONFIRMACAO",
+  )
+    ? "pendente"
+    : tombo.itensMovimentacao.some(
+          (item) => item.movimentacao.status === "CONFIRMADA_DESTINO",
+        )
+      ? "confirmado"
+      : null;
 
   const nomeResp = nomeResponsavelExibicao(tombo);
 
@@ -470,7 +478,7 @@ export default async function TomboDetalhePage({ params }: Props) {
           Tombos
         </Link>
 
-        <HeroCard tombo={tombo} emMovimentacao={emMovimentacao} />
+        <HeroCard tombo={tombo} statusMovimentacao={statusMovimentacao} />
 
         {(tombo.unidade || tombo.setor) && (
           <InfoSection

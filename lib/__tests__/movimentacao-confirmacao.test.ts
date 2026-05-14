@@ -46,7 +46,7 @@ describe("movimentacao-confirmacao", () => {
     it("deve negar quando status nao esta pendente", () => {
       const tokenFuturo = new Date(Date.now() + 60_000);
       expect(
-        estaPendenteEValidaParaConfirmacao("CONFIRMADA_ORIGEM", tokenFuturo),
+        estaPendenteEValidaParaConfirmacao("CONFIRMADA_DESTINO", tokenFuturo),
       ).toBe(false);
     });
 
@@ -61,7 +61,7 @@ describe("movimentacao-confirmacao", () => {
   describe("avaliarPermissaoConfirmacaoMovimentacao", () => {
     it("deve negar quando status não está pendente", async () => {
       const result = await avaliarPermissaoConfirmacaoMovimentacao({
-        status: "CONFIRMADA_ORIGEM",
+        status: "CONFIRMADA_DESTINO",
         tokenExpiraEm: new Date(Date.now() + 60_000),
         unidadeDestinoId: "unidade-1",
         usuario: {

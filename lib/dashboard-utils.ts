@@ -96,7 +96,7 @@ export function agruparPorUnidade(
 
     if (STATUS_PENDENTES.includes(mov.status)) {
       existing.pendentes += count;
-    } else if (mov.status === "CONFIRMADA_ORIGEM") {
+    } else if (mov.status === "CONFIRMADA_DESTINO") {
       existing.confirmadas += count;
     } else if (mov.status === "REGISTRADA_SICAM") {
       existing.registradas += count;

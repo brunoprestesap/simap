@@ -44,7 +44,15 @@ function TomboStatusBadge({ tombo }: { tombo: TomboItem }) {
       </span>
     );
   }
-  if (tombo.itensMovimentacao.length > 0) {
+  const movStatus = tombo.itensMovimentacao[0]?.movimentacao.status;
+  if (movStatus === "CONFIRMADA_DESTINO") {
+    return (
+      <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">
+        Aguardando SICAM
+      </span>
+    );
+  }
+  if (movStatus === "PENDENTE_CONFIRMACAO") {
     return (
       <span className="inline-flex items-center rounded-full bg-jf-warning/15 px-2.5 py-0.5 text-xs font-semibold text-jf-warning">
         Em movimentação

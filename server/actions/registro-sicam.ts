@@ -59,10 +59,10 @@ export async function registrarNoSicam(input: z.input<typeof registroSicamSchema
     return { success: false, error: "Movimentação não encontrada." };
   }
 
-  if (movimentacao.status !== "CONFIRMADA_ORIGEM") {
+  if (movimentacao.status !== "CONFIRMADA_DESTINO") {
     return {
       success: false,
-      error: "Somente movimentações confirmadas podem ser registradas no SICAM.",
+      error: "Somente movimentações confirmadas pelo destino podem ser registradas no SICAM.",
     };
   }
 
@@ -94,11 +94,11 @@ export async function registrarNoSicam(input: z.input<typeof registroSicamSchema
   const tomboIds = movimentacao.itens.map((i) => i.tomboId);
 
   // Atômico: status + lotação dos tombos + auditoria. Falha em qualquer write reverte tudo.
-  // Guarda no WHERE garante que apenas movimentações em CONFIRMADA_ORIGEM sejam atualizadas
+  // Guarda no WHERE garante que apenas movimentações em CONFIRMADA_DESTINO sejam atualizadas
   // (defesa contra race com outro registro SICAM concorrente).
   const updated = await prisma.$transaction(async (tx) => {
     const r = await tx.movimentacao.updateMany({
-      where: { id: movimentacaoId, status: "CONFIRMADA_ORIGEM" },
+      where: { id: movimentacaoId, status: "CONFIRMADA_DESTINO" },
       data: {
         status: "REGISTRADA_SICAM",
         protocoloSicam,
@@ -142,7 +142,7 @@ export async function registrarNoSicam(input: z.input<typeof registroSicamSchema
   if (!updated) {
     return {
       success: false,
-      error: "Movimentação já registrada por outro usuário ou não está mais em CONFIRMADA_ORIGEM.",
+      error: "Movimentação já registrada por outro usuário ou não está mais em CONFIRMADA_DESTINO.",
     };
   }
 

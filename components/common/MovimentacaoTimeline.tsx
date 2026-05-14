@@ -15,7 +15,7 @@ interface MovimentacaoTimelineProps {
 
 const DATE_BY_STEP: Record<string, keyof TimelineDates> = {
   PENDENTE_CONFIRMACAO: "createdAt",
-  CONFIRMADA_ORIGEM: "confirmadoEm",
+  CONFIRMADA_DESTINO: "confirmadoEm",
   REGISTRADA_SICAM: "dataRegistroSicam",
 };
 

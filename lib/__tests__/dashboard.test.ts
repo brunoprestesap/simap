@@ -114,7 +114,7 @@ describe("agruparPorUnidade", () => {
     }[] = [
       { unidadeOrigemId: "u1", status: "PENDENTE_CONFIRMACAO", _count: { id: 3 } },
       { unidadeOrigemId: "u1", status: "REGISTRADA_SICAM", _count: { id: 5 } },
-      { unidadeOrigemId: "u2", status: "CONFIRMADA_ORIGEM", _count: { id: 2 } },
+      { unidadeOrigemId: "u2", status: "CONFIRMADA_DESTINO", _count: { id: 2 } },
     ];
 
     const result = agruparPorUnidade(dados, unidadeNomes);

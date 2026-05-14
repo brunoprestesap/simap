@@ -93,13 +93,13 @@ describe("contarPendentesSicam", () => {
     expect(result).toBe(7);
   });
 
-  it("deve filtrar por status CONFIRMADA_ORIGEM", async () => {
+  it("deve filtrar por status CONFIRMADA_DESTINO", async () => {
     vi.mocked(prisma.movimentacao.count).mockResolvedValueOnce(0);
 
     await contarPendentesSicam();
 
     expect(prisma.movimentacao.count).toHaveBeenCalledWith({
-      where: { status: "CONFIRMADA_ORIGEM" },
+      where: { status: "CONFIRMADA_DESTINO" },
     });
   });
 
@@ -238,7 +238,7 @@ describe("listarDistribuicaoPorUnidade", () => {
 
   it("deve buscar nomes somente das unidades presentes", async () => {
     vi.mocked(prisma.movimentacao.groupBy).mockResolvedValueOnce([
-      { unidadeOrigemId: "u2", status: "CONFIRMADA_ORIGEM", _count: { id: 1 } },
+      { unidadeOrigemId: "u2", status: "CONFIRMADA_DESTINO", _count: { id: 1 } },
     ] as never);
     vi.mocked(prisma.unidade.findMany).mockResolvedValueOnce([
       { id: "u2", descricao: "SEMAP" } as never,

@@ -32,7 +32,7 @@ export async function listarBacklog(filters: BacklogFilters = {}) {
     where.status = status;
   } else if (!status) {
     // Default: show only actionable items (PENDENTE or CONFIRMADA)
-    where.status = { in: ["PENDENTE_CONFIRMACAO", "CONFIRMADA_ORIGEM"] };
+    where.status = { in: ["PENDENTE_CONFIRMACAO", "CONFIRMADA_DESTINO"] };
   }
 
   // Filter by date range

@@ -72,8 +72,8 @@ function tabelaTombos(tombos: TomboInfo[]): string {
 }
 
 /**
- * E-mail de confirmação (enviado ao responsável da unidade de DESTINO)
- * Contém link de confirmação com token.
+ * E-mail de confirmação de recebimento (enviado ao responsável da unidade de DESTINO).
+ * Contém link de confirmação com token — ato que formaliza a aceitação da guarda do bem.
  */
 export function templateEmailSaida(
   dados: MovimentacaoEmailData & { linkConfirmacao: string },
@@ -126,14 +126,15 @@ export function templateEmailSaida(
 }
 
 /**
- * E-mail de entrada (enviado ao responsável da unidade de DESTINO)
- * Informativo, sem link de confirmação.
+ * E-mail informativo de saída (enviado ao responsável da unidade de ORIGEM).
+ * Não requer ação — informa que os tombos saíram de sua guarda.
  */
-export function templateEmailEntrada(dados: MovimentacaoEmailData): string {
+export function templateEmailSaidaOrigem(dados: MovimentacaoEmailData): string {
   const conteudo = `
-    <h2 style="margin:0 0 16px;color:#003366;font-size:18px;">Entrada de Patrimônios</h2>
+    <h2 style="margin:0 0 16px;color:#003366;font-size:18px;">Saída de Patrimônios de sua Unidade</h2>
     <p style="margin:0 0 8px;font-size:14px;line-height:1.6;">
-      Informamos que os seguintes bens patrimoniais foram movimentados para sua unidade.
+      Informamos que os seguintes bens patrimoniais foram retirados de sua unidade pelo técnico de TI indicado abaixo.
+      O responsável pela unidade de destino confirmará o recebimento, e a SEMAP realizará o registro oficial no SICAM.
     </p>
 
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0;background-color:#F2F2F2;border-radius:4px;">
@@ -157,8 +158,8 @@ export function templateEmailEntrada(dados: MovimentacaoEmailData): string {
     ${tabelaTombos(dados.tombos)}
 
     <p style="margin:16px 0 0;font-size:13px;color:#666666;">
-      Nenhuma ação é necessária da sua parte. Os bens serão registrados no SICAM pela SEMAP.
+      Nenhuma ação é necessária da sua parte. Em caso de dúvidas, entre em contato com a SEMAP.
     </p>`;
 
-  return layoutBase("Movimentação Patrimonial - Entrada de Tombos", conteudo);
+  return layoutBase("Movimentação Patrimonial - Saída de Tombos", conteudo);
 }

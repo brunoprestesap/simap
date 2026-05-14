@@ -146,7 +146,7 @@ describe("listarRelatorioAuditoria — filtros", () => {
   });
 
   it("deve aplicar o mesmo where no count e no findMany", async () => {
-    await listarRelatorioAuditoria({ status: "CONFIRMADA_ORIGEM" });
+    await listarRelatorioAuditoria({ status: "CONFIRMADA_DESTINO" });
 
     const findManyWhere = vi.mocked(prisma.movimentacao.findMany).mock.calls[0][0]?.where;
     const countWhere = vi.mocked(prisma.movimentacao.count).mock.calls[0][0]?.where;

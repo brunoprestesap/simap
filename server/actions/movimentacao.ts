@@ -7,7 +7,10 @@ import { criarMovimentacaoSchema } from "@/lib/validations/movimentacao";
 import type { CriarMovimentacaoInput } from "@/lib/validations/movimentacao";
 import { registrarAuditoria } from "@/server/services/audit";
 import { enviarEmail } from "@/server/services/email";
-import { templateEmailSaida } from "@/server/services/email-templates";
+import {
+  templateEmailSaida,
+  templateEmailSaidaOrigem,
+} from "@/server/services/email-templates";
 import { buscarEmailsPorMatriculas } from "@/server/services/ldap";
 import {
   criarNotificacoes,
@@ -155,16 +158,36 @@ export async function criarMovimentacao(input: CriarMovimentacaoInput): Promise<
   const appUrl = process.env.APP_URL ?? process.env.NEXTAUTH_URL ?? "http://localhost:3000";
   const linkConfirmacao = `${appUrl}/confirmar/${movimentacao.tokenConfirmacao}`;
 
-  const destinoResponsaveis = await prisma.usuario.findMany({
-    where: {
-      unidadeId: unidadeDestinoId,
-      ativo: true,
-      responsavelUnidade: true,
-    },
-    select: { matricula: true },
-  });
+  const [origemResponsaveis, destinoResponsaveis] = await Promise.all([
+    prisma.usuario.findMany({
+      where: { unidadeId: unidadeOrigemId, ativo: true, responsavelUnidade: true },
+      select: { matricula: true },
+    }),
+    prisma.usuario.findMany({
+      where: { unidadeId: unidadeDestinoId, ativo: true, responsavelUnidade: true },
+      select: { matricula: true },
+    }),
+  ]);
 
-  // Busca todos e-mails em uma única query (fire-and-forget com log de erro)
+  // E-mail informativo ao responsável da ORIGEM (saída dos tombos de sua guarda)
+  buscarEmailsPorMatriculas(origemResponsaveis.map((s) => s.matricula))
+    .then((emailMap) => {
+      for (const srv of origemResponsaveis) {
+        const email = emailMap.get(srv.matricula);
+        if (email) {
+          enviarEmail(
+            email,
+            "Movimentação Patrimonial - Saída de Tombos",
+            templateEmailSaidaOrigem(emailData),
+          );
+        }
+      }
+    })
+    .catch((err) => {
+      movimentacaoLogger.error({ err }, "falha ao enviar e-mails de saída para origem");
+    });
+
+  // E-mail de confirmação de recebimento ao responsável do DESTINO (com token)
   buscarEmailsPorMatriculas(destinoResponsaveis.map((s) => s.matricula))
     .then((emailMap) => {
       for (const srv of destinoResponsaveis) {
@@ -172,32 +195,50 @@ export async function criarMovimentacao(input: CriarMovimentacaoInput): Promise<
         if (email) {
           enviarEmail(
             email,
-            "Movimentação Patrimonial - Confirmação de Entrada",
+            "Movimentação Patrimonial - Confirmação de Recebimento",
             templateEmailSaida({ ...emailData, linkConfirmacao }),
           );
         }
       }
     })
     .catch((err) => {
-      movimentacaoLogger.error(
-        { err },
-        "falha ao enviar e-mails de notificação",
-      );
+      movimentacaoLogger.error({ err }, "falha ao enviar e-mails de confirmação para destino");
     });
 
   // ─── Notificações ─────────────────────────────────────────
 
-  const usuarioIds = await buscarUsuarioIdsPorMatriculas(
-    destinoResponsaveis.map((srv) => srv.matricula),
-  );
+  const [idsOrigem, idsDestino] = await Promise.all([
+    buscarUsuarioIdsPorMatriculas(origemResponsaveis.map((s) => s.matricula)),
+    buscarUsuarioIdsPorMatriculas(destinoResponsaveis.map((s) => s.matricula)),
+  ]);
 
-  await criarNotificacoes({
-    tipo: "SAIDA_TOMBO",
-    titulo: "Confirmação de movimentação pendente",
-    mensagem: `${tombosInfo.length} tombo(s) aguardando confirmação de entrada em ${movimentacao.unidadeDestino.descricao}.`,
-    link: `/movimentacao/${movimentacao.id}`,
-    usuarioDestinoIds: usuarioIds,
-  });
+  const notificacoes: Promise<unknown>[] = [];
+
+  if (idsOrigem.length > 0) {
+    notificacoes.push(
+      criarNotificacoes({
+        tipo: "SAIDA_TOMBO",
+        titulo: "Tombos retirados de sua unidade",
+        mensagem: `${tombosInfo.length} tombo(s) foram retirados de ${movimentacao.unidadeOrigem.descricao} pelo técnico ${user!.nome}.`,
+        link: `/movimentacao/${movimentacao.id}`,
+        usuarioDestinoIds: idsOrigem,
+      }),
+    );
+  }
+
+  if (idsDestino.length > 0) {
+    notificacoes.push(
+      criarNotificacoes({
+        tipo: "ENTRADA_TOMBO",
+        titulo: "Confirmação de recebimento pendente",
+        mensagem: `${tombosInfo.length} tombo(s) aguardando confirmação de recebimento em ${movimentacao.unidadeDestino.descricao}.`,
+        link: `/movimentacao/${movimentacao.id}`,
+        usuarioDestinoIds: idsDestino,
+      }),
+    );
+  }
+
+  await Promise.all(notificacoes);
 
   return { success: true, movimentacaoId: movimentacao.id };
 }

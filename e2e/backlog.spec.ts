@@ -16,15 +16,15 @@ test.describe("Backlog SEMAP", () => {
   test("deve filtrar por status", async ({ page }) => {
     await page.getByRole("button", { name: /Filtros/i }).click();
     const statusSelect = page.locator("div.rounded-lg.border.border-border.bg-card.p-4").getByRole("combobox").first();
-    await statusSelect.selectOption("CONFIRMADA_ORIGEM");
-    await expect(page).toHaveURL(/status=CONFIRMADA_ORIGEM/);
+    await statusSelect.selectOption("CONFIRMADA_DESTINO");
+    await expect(page).toHaveURL(/status=CONFIRMADA_DESTINO/);
   });
 
   test("deve limpar filtros", async ({ page }) => {
     await page.getByRole("button", { name: /Filtros/i }).click();
     const statusSelect = page.locator("div.rounded-lg.border.border-border.bg-card.p-4").getByRole("combobox").first();
-    await statusSelect.selectOption("CONFIRMADA_ORIGEM");
-    await expect(page).toHaveURL(/status=CONFIRMADA_ORIGEM/);
+    await statusSelect.selectOption("CONFIRMADA_DESTINO");
+    await expect(page).toHaveURL(/status=CONFIRMADA_DESTINO/);
     await page.getByRole("button", { name: /Limpar filtros/i }).click();
     await expect(page).toHaveURL("/backlog");
   });
@@ -32,10 +32,10 @@ test.describe("Backlog SEMAP", () => {
 
   test("deve registrar movimentação no SICAM com sucesso", async ({ page }) => {
     const movId = await getMovimentacaoConfirmada();
-    expect(movId, "Nenhuma movimentação CONFIRMADA_ORIGEM no banco").toBeTruthy();
+    expect(movId, "Nenhuma movimentação CONFIRMADA_DESTINO no banco").toBeTruthy();
 
-    await page.goto("/backlog?status=CONFIRMADA_ORIGEM");
-    await page.waitForURL(/status=CONFIRMADA_ORIGEM/, { timeout: 10_000 });
+    await page.goto("/backlog?status=CONFIRMADA_DESTINO");
+    await page.waitForURL(/status=CONFIRMADA_DESTINO/, { timeout: 10_000 });
 
     const registerButton = page
       .getByRole("button", { name: "Registrar no SICAM" })

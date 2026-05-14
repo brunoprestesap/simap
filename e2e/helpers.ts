@@ -40,7 +40,7 @@ export async function getTomboDisponivel(): Promise<string | null> {
       SELECT 1 FROM "ItemMovimentacao" i
       JOIN "Movimentacao" m ON m.id = i."movimentacaoId"
       WHERE i."tomboId" = t.id
-        AND m.status IN ('PENDENTE_CONFIRMACAO', 'CONFIRMADA_ORIGEM')
+        AND m.status IN ('PENDENTE_CONFIRMACAO', 'CONFIRMADA_DESTINO')
     )
     ORDER BY t.numero ASC
     LIMIT 1
@@ -70,7 +70,7 @@ export async function buscarMovimentacaoPendente(
 export async function getMovimentacaoConfirmada(): Promise<string | null> {
   const rows = await queryDb<{ id: string }>(`
     SELECT id FROM "Movimentacao"
-    WHERE status = 'CONFIRMADA_ORIGEM'
+    WHERE status = 'CONFIRMADA_DESTINO'
     ORDER BY "createdAt" DESC
     LIMIT 1
   `);

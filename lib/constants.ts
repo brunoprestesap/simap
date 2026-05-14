@@ -44,8 +44,8 @@ export const STATUS_CONFIG: Record<
     className: "bg-jf-warning/15 text-jf-warning",
     order: 0,
   },
-  CONFIRMADA_ORIGEM: {
-    label: "Confirmada",
+  CONFIRMADA_DESTINO: {
+    label: "Recebimento Confirmado",
     className: "bg-primary/10 text-primary",
     order: 1,
   },
@@ -68,6 +68,6 @@ export const TIMELINE_STEPS: {
   icon: ElementType;
 }[] = [
   { status: "PENDENTE_CONFIRMACAO", label: "Registrada", icon: FileText },
-  { status: "CONFIRMADA_ORIGEM", label: "Confirmada", icon: CheckCircle2 },
+  { status: "CONFIRMADA_DESTINO", label: "Recebimento Confirmado", icon: CheckCircle2 },
   { status: "REGISTRADA_SICAM", label: "Registrada SICAM", icon: ClipboardCheck },
 ];

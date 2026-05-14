@@ -165,6 +165,7 @@ describe("criarMovimentacao", () => {
     expect(result).toEqual({ success: true, movimentacaoId: "mov-1" });
     expect(prisma.movimentacao.create).toHaveBeenCalledTimes(1);
     expect(registrarAuditoria).toHaveBeenCalledTimes(1);
-    expect(criarNotificacoes).toHaveBeenCalledTimes(1);
+    // Uma chamada para origem (SAIDA_TOMBO) e outra para destino (ENTRADA_TOMBO)
+    expect(criarNotificacoes).toHaveBeenCalledTimes(2);
   });
 });

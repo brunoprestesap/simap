@@ -53,7 +53,7 @@ export function SemapHome({ firstName, data, meusTombosInicial }: SemapHomeProps
                 label: "Pendentes no SICAM",
                 value: data.pendentesSicam,
                 tone: "secondary",
-                href: "/backlog?status=CONFIRMADA_ORIGEM",
+                href: "/backlog?status=CONFIRMADA_DESTINO",
                 actionLabel: "Ver prontas",
               },
               {
@@ -106,9 +106,9 @@ export function SemapHome({ firstName, data, meusTombosInicial }: SemapHomeProps
               }`,
               title: `${mov.origem} → ${mov.destino}`,
               description:
-                mov.status === "CONFIRMADA_ORIGEM"
+                mov.status === "CONFIRMADA_DESTINO"
                   ? "Pronta para registro no SICAM."
-                  : "Aguardando confirmação da origem.",
+                  : "Aguardando confirmação do destino.",
               meta: `${mov.tombos} ${mov.tombos === 1 ? "tombo" : "tombos"} • ${formatDateTimeBR(
                 mov.createdAt,
               )}`,

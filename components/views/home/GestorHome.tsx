@@ -66,7 +66,7 @@ export function GestorHome({ firstName, data, meusTombosInicial }: GestorHomePro
                 label: "Pendentes no SICAM",
                 value: data.pendentesSicam,
                 tone: "secondary",
-                href: "/backlog?status=CONFIRMADA_ORIGEM",
+                href: "/backlog?status=CONFIRMADA_DESTINO",
                 actionLabel: "Abrir backlog",
               },
               {

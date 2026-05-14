@@ -43,7 +43,7 @@ async function PendentesSicamKPI() {
       label="Pendentes de registro no SICAM"
       value={count}
       color="text-jf-warning"
-      link={{ href: "/backlog?status=CONFIRMADA_ORIGEM", label: "Ver backlog" }}
+      link={{ href: "/backlog?status=CONFIRMADA_DESTINO", label: "Ver backlog" }}
     />
   );
 }

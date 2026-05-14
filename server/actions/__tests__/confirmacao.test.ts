@@ -173,7 +173,7 @@ describe("confirmarMovimentacaoPublica — atomicidade contra duplo-clique", () 
           >;
         }
         return {
-          status: "CONFIRMADA_ORIGEM",
+          status: "CONFIRMADA_DESTINO",
           tokenExpiraEm: new Date(Date.now() + 60_000),
         } as Awaited<ReturnType<typeof prisma.movimentacao.findUnique>>;
       }) as unknown as typeof prisma.movimentacao.findUnique,

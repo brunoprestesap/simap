@@ -75,7 +75,7 @@ export const calcularTempoMedioRegistroSicam = cache(async (): Promise<KPITempoM
 
 export const contarPendentesSicam = cache(async (): Promise<number> => {
   return prisma.movimentacao.count({
-    where: { status: "CONFIRMADA_ORIGEM" },
+    where: { status: "CONFIRMADA_DESTINO" },
   });
 });
 

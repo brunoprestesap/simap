@@ -99,7 +99,7 @@ export function BacklogList({ onRegistrar }: BacklogListProps) {
             <FormSelect value={status} onChange={(e) => updateParams({ status: e.target.value })}>
               <option value="">Pendentes + Confirmadas</option>
               <option value="PENDENTE_CONFIRMACAO">Pendente</option>
-              <option value="CONFIRMADA_ORIGEM">Confirmada</option>
+              <option value="CONFIRMADA_DESTINO">Recebimento Confirmado</option>
               <option value="TODAS">Todas</option>
             </FormSelect>
           </FilterField>
@@ -183,7 +183,7 @@ function BacklogCard({
           </p>
         </div>
         <div className="shrink-0">
-          {mov.status === "CONFIRMADA_ORIGEM" ? (
+          {mov.status === "CONFIRMADA_DESTINO" ? (
             <Button size="sm" onClick={() => onRegistrar(mov)}>Registrar no SICAM</Button>
           ) : (
             <Button size="sm" variant="outline" disabled>Aguardando confirmação</Button>

@@ -59,7 +59,7 @@ function AuditoriaFilterPanel({
         <select value={status} onChange={(e) => onUpdate({ status: e.target.value })} className="h-8 w-full rounded-md border border-border bg-background px-2 text-sm">
           <option value="">Todos</option>
           <option value="PENDENTE_CONFIRMACAO">Pendente</option>
-          <option value="CONFIRMADA_ORIGEM">Confirmada</option>
+          <option value="CONFIRMADA_DESTINO">Recebimento Confirmado</option>
           <option value="REGISTRADA_SICAM">Registrada SICAM</option>
           <option value="NAO_CONFIRMADA">Não Confirmada</option>
         </select>

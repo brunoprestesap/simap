@@ -37,7 +37,7 @@ async function concluirConfirmacao({
         tokenExpiraEm: { gt: new Date() },
       },
       data: {
-        status: "CONFIRMADA_ORIGEM",
+        status: "CONFIRMADA_DESTINO",
         confirmadoEm: new Date(),
         confirmadoPorNome,
       },

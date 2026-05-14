@@ -81,7 +81,7 @@ export function HistoricoMovimentacoes() {
             <FormSelect value={status} onChange={(e) => updateParams({ status: e.target.value })}>
               <option value="">Todas</option>
               <option value="PENDENTE_CONFIRMACAO">Pendente</option>
-              <option value="CONFIRMADA_ORIGEM">Confirmada</option>
+              <option value="CONFIRMADA_DESTINO">Recebimento Confirmado</option>
               <option value="REGISTRADA_SICAM">Registrada SICAM</option>
               <option value="NAO_CONFIRMADA">Não Confirmada</option>
             </FormSelect>

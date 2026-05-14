@@ -50,7 +50,7 @@ function mockTransactionAsTx() {
 
 const movimentacaoConfirmada = {
   id: "mov-2",
-  status: "CONFIRMADA_ORIGEM" as const,
+  status: "CONFIRMADA_DESTINO" as const,
   unidadeDestinoId: "u-destino",
   setorDestinoId: null,
   tecnicoId: "tec-1",
@@ -100,7 +100,7 @@ describe("registrarNoSicam", () => {
 
     expect(result).toEqual({
       success: false,
-      error: "Somente movimentações confirmadas podem ser registradas no SICAM.",
+      error: "Somente movimentações confirmadas pelo destino podem ser registradas no SICAM.",
     });
     expect(prisma.movimentacao.updateMany).not.toHaveBeenCalled();
     expect(prisma.tombo.updateMany).not.toHaveBeenCalled();
@@ -140,7 +140,7 @@ describe("registrarNoSicam", () => {
     expect(prisma.notificacao.create).toHaveBeenCalled();
   });
 
-  it("deve abortar com erro quando outra requisição já saiu de CONFIRMADA_ORIGEM (race no SICAM)", async () => {
+  it("deve abortar com erro quando outra requisição já saiu de CONFIRMADA_DESTINO (race no SICAM)", async () => {
     vi.mocked(prisma.movimentacao.findUnique).mockResolvedValue(
       movimentacaoConfirmada as unknown as Awaited<
         ReturnType<typeof prisma.movimentacao.findUnique>
@@ -158,7 +158,7 @@ describe("registrarNoSicam", () => {
     });
 
     expect(result.success).toBe(false);
-    expect(result.error).toMatch(/CONFIRMADA_ORIGEM|outro usuário/i);
+    expect(result.error).toMatch(/CONFIRMADA_DESTINO|outro usuário/i);
     expect(prisma.tombo.updateMany).not.toHaveBeenCalled();
     expect(prisma.auditLog.create).not.toHaveBeenCalled();
     expect(prisma.notificacao.create).not.toHaveBeenCalled();

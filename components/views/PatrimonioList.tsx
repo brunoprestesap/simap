@@ -151,12 +151,22 @@ export function PatrimonioList({ unidadeId, unidadeNome, pendentesConfirmacao }:
 
 // ─── Sub-components ─────────────────────────────────────
 
-function MovimentacaoBadge({ emMovimentacao }: { emMovimentacao: boolean }) {
-  return emMovimentacao ? (
-    <span className="rounded-full bg-jf-warning/15 px-2 py-0.5 text-xs font-semibold text-jf-warning">
-      Em movimentação
-    </span>
-  ) : (
+function MovimentacaoBadge({ movStatus }: { movStatus: string | undefined }) {
+  if (movStatus === "CONFIRMADA_DESTINO") {
+    return (
+      <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+        Aguardando SICAM
+      </span>
+    );
+  }
+  if (movStatus === "PENDENTE_CONFIRMACAO") {
+    return (
+      <span className="rounded-full bg-jf-warning/15 px-2 py-0.5 text-xs font-semibold text-jf-warning">
+        Em movimentação
+      </span>
+    );
+  }
+  return (
     <span className="rounded-full bg-secondary/10 px-2 py-0.5 text-xs font-semibold text-secondary">
       Presente
     </span>
@@ -164,7 +174,7 @@ function MovimentacaoBadge({ emMovimentacao }: { emMovimentacao: boolean }) {
 }
 
 function TomboCard({ tombo }: { tombo: TomboItem }) {
-  const emMovimentacao = tombo.itensMovimentacao.length > 0;
+  const movStatus = tombo.itensMovimentacao[0]?.movimentacao.status;
   return (
     <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
       <div className="flex items-start justify-between">
@@ -173,20 +183,20 @@ function TomboCard({ tombo }: { tombo: TomboItem }) {
           <p className="mt-0.5 text-sm text-foreground">{tombo.descricaoMaterial}</p>
           {tombo.setor && <p className="mt-0.5 text-xs text-muted-foreground">Setor: {tombo.setor.nome}</p>}
         </div>
-        {emMovimentacao && <MovimentacaoBadge emMovimentacao />}
+        <MovimentacaoBadge movStatus={movStatus} />
       </div>
     </div>
   );
 }
 
 function TomboRow({ tombo }: { tombo: TomboItem }) {
-  const emMovimentacao = tombo.itensMovimentacao.length > 0;
+  const movStatus = tombo.itensMovimentacao[0]?.movimentacao.status;
   return (
     <tr className="border-b border-border last:border-0">
       <td className="py-3 font-mono">{tombo.numero}</td>
       <td className="py-3">{tombo.descricaoMaterial}</td>
       <td className="py-3 text-muted-foreground">{tombo.setor?.nome || "—"}</td>
-      <td className="py-3"><MovimentacaoBadge emMovimentacao={emMovimentacao} /></td>
+      <td className="py-3"><MovimentacaoBadge movStatus={movStatus} /></td>
     </tr>
   );
 }
