@@ -7,7 +7,7 @@ set -euo pipefail
 STACK_DIR="/opt/simap"
 COMPOSE_FILE="deploy/docker-compose.prod.yml"
 IMAGE="ghcr.io/brunoprestesap/simap:latest"
-LOG="/var/log/simap-autodeploy.log"
+LOG="/opt/simap/deploy/autodeploy.log"
 LOCK="/tmp/simap-deploy.lock"
 
 export GHCR_IMAGE="brunoprestesap/simap"
@@ -17,6 +17,24 @@ exec 9>"$LOCK"
 flock -n 9 || exit 0
 
 cd "$STACK_DIR"
+
+# Sincroniza arquivos de deploy (nginx.conf, compose, scripts) com o repo
+NGINX_BEFORE=$(md5sum deploy/nginx.conf 2>/dev/null || echo none)
+git pull --ff-only origin main >> "$LOG" 2>&1 || {
+  echo "$(date -Iseconds) AVISO: git pull falhou, continuando com versao local." >> "$LOG"
+}
+NGINX_AFTER=$(md5sum deploy/nginx.conf 2>/dev/null || echo none)
+
+# Recarrega nginx sem downtime se o config mudou
+if [ "$NGINX_BEFORE" != "$NGINX_AFTER" ]; then
+  echo "$(date -Iseconds) nginx.conf atualizado, recarregando..." >> "$LOG"
+  if docker exec simap-proxy nginx -t >> "$LOG" 2>&1; then
+    docker exec simap-proxy nginx -s reload >> "$LOG" 2>&1
+    echo "$(date -Iseconds) nginx recarregado." >> "$LOG"
+  else
+    echo "$(date -Iseconds) ERRO: nginx.conf invalido, reload cancelado." >> "$LOG"
+  fi
+fi
 
 # Pull silencioso — falha silenciosa se GHCR estiver fora do ar
 if ! docker pull "$IMAGE" --quiet > /dev/null 2>&1; then
