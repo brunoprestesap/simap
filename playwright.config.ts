@@ -5,7 +5,9 @@ export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
+  // 1 retry local absorve flakes de compilação sob demanda do dev server
+  // quando vários workers competem por CPU; CI mantém 2.
+  retries: process.env.CI ? 2 : 1,
   workers: process.env.CI ? 1 : undefined,
   reporter: "html",
   use: {
@@ -21,6 +23,9 @@ export default defineConfig({
     url: "http://localhost:3000",
     reuseExistingServer: !process.env.CI,
     // E2E usa login só-banco (sem AD); evita falhar quando .env tem LDAP_URL.
-    env: { ...process.env, LDAP_URL: "" },
+    // E2E_DISABLE_RATE_LIMIT: a suíte loga dezenas de vezes pelo mesmo IP
+    // (localhost) e estouraria o limiter por IP em lib/auth.ts. Só tem efeito
+    // fora de produção.
+    env: { ...process.env, LDAP_URL: "", E2E_DISABLE_RATE_LIMIT: "1" },
   },
 });

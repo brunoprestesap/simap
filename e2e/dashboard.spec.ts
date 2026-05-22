@@ -12,8 +12,12 @@ test.describe("Dashboard Gerencial", () => {
     await page.waitForURL("/dashboard", { timeout: 15_000 });
   });
 
-  test("deve exibir título do dashboard", async ({ page }) => {
-    await expect(page.locator("h2")).toContainText("Dashboard gerencial");
+  test("deve renderizar o dashboard gerencial", async ({ page }) => {
+    // O layout não tem mais título de página (h2); valida que o conteúdo
+    // do dashboard renderiza pela primeira seção de gráficos.
+    await expect(
+      page.getByRole("heading", { name: "Movimentações por período" }),
+    ).toBeVisible({ timeout: 10_000 });
   });
 
   test("deve exibir 3 KPI cards", async ({ page }) => {
@@ -56,13 +60,16 @@ test.describe("Dashboard Gerencial", () => {
 
   test("deve exibir relatório de auditoria com filtros", async ({ page }) => {
     await expect(page.locator("text=Relatório de auditoria")).toBeVisible({ timeout: 10000 });
-    // Filters should be open by default
+    // Filtros ficam colapsados por padrão; abrir o painel pelo botão "Filtros".
+    await page.getByRole("button", { name: "Filtros" }).click();
     await expect(page.locator("text=Período início")).toBeVisible();
-    await expect(page.locator("text=Status")).toBeVisible();
+    await expect(page.locator("text=Período fim")).toBeVisible();
   });
 
   test("deve filtrar auditoria por status", async ({ page }) => {
     await page.waitForSelector("text=Relatório de auditoria", { timeout: 10000 });
+    // Filtros ficam colapsados por padrão; abrir o painel antes de filtrar.
+    await page.getByRole("button", { name: "Filtros" }).click();
     const statusSelect = page.locator(
       'select:has(option[value="REGISTRADA_SICAM"])',
     );

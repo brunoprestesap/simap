@@ -47,8 +47,10 @@ test.describe("Meus Patrimônios", () => {
     const pendentes = parseInt(row?.cnt ?? "0", 10);
 
     if (pendentes > 0) {
+      // Texto específico do badge (evita colidir com nomes de unidade que
+      // contenham dígitos, ex.: "Secretaria da 1ª Vara Federal").
       await expect(
-        page.getByText(new RegExp(`${pendentes}|pendente`, "i")),
+        page.getByText(/pendentes? de confirmação/i).first(),
       ).toBeVisible({ timeout: 10_000 });
     }
     await expect(page.getByRole("heading", { name: "Meus Patrimônios" })).toBeVisible();
