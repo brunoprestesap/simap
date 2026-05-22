@@ -32,6 +32,14 @@ const IP_LOGIN_RATE_LIMIT = {
   lockoutMs: 15 * 60_000,
 } as const;
 
+// Bypass do rate limit de login apenas em ambiente de teste E2E: a suíte loga
+// dezenas de vezes pelo mesmo IP (localhost) e estouraria o limiter por IP.
+// Só tem efeito fora de produção e quando explicitamente sinalizado pelo
+// webServer do Playwright (E2E_DISABLE_RATE_LIMIT=1). Nunca em prod.
+const RATE_LIMIT_DISABLED =
+  process.env.NODE_ENV !== "production" &&
+  process.env.E2E_DISABLE_RATE_LIMIT === "1";
+
 declare module "next-auth" {
   interface Session {
     user: {
@@ -110,22 +118,24 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             request.headers.get("x-real-ip") ??
             "unknown";
 
-          const rlIp = consumeAttempt(`login:ip:${ip}`, IP_LOGIN_RATE_LIMIT);
-          if (!rlIp.allowed) {
-            authLogger.warn(
-              { ip, retryAfterMs: rlIp.retryAfterMs },
-              "login bloqueado por rate limit de IP",
-            );
-            throw new RateLimitError();
-          }
+          if (!RATE_LIMIT_DISABLED) {
+            const rlIp = consumeAttempt(`login:ip:${ip}`, IP_LOGIN_RATE_LIMIT);
+            if (!rlIp.allowed) {
+              authLogger.warn(
+                { ip, retryAfterMs: rlIp.retryAfterMs },
+                "login bloqueado por rate limit de IP",
+              );
+              throw new RateLimitError();
+            }
 
-          const rl = consumeAttempt(`login:${matricula}`, LOGIN_RATE_LIMIT);
-          if (!rl.allowed) {
-            authLogger.warn(
-              { matricula, retryAfterMs: rl.retryAfterMs },
-              "login bloqueado por rate limit",
-            );
-            throw new RateLimitError();
+            const rl = consumeAttempt(`login:${matricula}`, LOGIN_RATE_LIMIT);
+            if (!rl.allowed) {
+              authLogger.warn(
+                { matricula, retryAfterMs: rl.retryAfterMs },
+                "login bloqueado por rate limit",
+              );
+              throw new RateLimitError();
+            }
           }
 
           let ldapDisplayName: string | null = null;
