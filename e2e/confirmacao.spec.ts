@@ -65,7 +65,7 @@ test.describe("Confirmação Interna", () => {
     await confirmarBtn.click();
 
     // Aguardar re-render após router.refresh()
-    await expect(page.getByText("Confirmada")).toBeVisible({
+    await expect(page.getByText("Recebimento Confirmado")).toBeVisible({
       timeout: 15_000,
     });
     await expect(confirmarBtn).not.toBeVisible({ timeout: 10_000 });
