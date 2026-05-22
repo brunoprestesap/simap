@@ -112,6 +112,21 @@ server {
     proxy_set_header X-Forwarded-Proto https;
   }
 
+  # Sincronizacao SICAM: a Server Action percorre ~6-8k tombos no Oracle e leva
+  # alguns minutos (uma execucao real levou ~3m30s). Com o proxy_read_timeout
+  # global (120s) o nginx devolvia 504 enquanto a sync concluia no servidor.
+  # Folga dedicada so para esta rota — o restante segue com 120s.
+  location /admin/sicam {
+    proxy_pass http://nextjs;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto https;
+    proxy_read_timeout 600s;
+    proxy_send_timeout 600s;
+  }
+
   location / {
     proxy_pass http://nextjs;
     proxy_http_version 1.1;
