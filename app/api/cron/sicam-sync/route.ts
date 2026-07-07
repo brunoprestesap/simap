@@ -19,7 +19,7 @@ const SETE_DIAS_MS = 7 * 24 * 60 * 60 * 1000;
  * Não usa `export const runtime = 'edge'` — mantém Node.js para oracledb.
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  const secret = env().CRON_SECRET;
+  const secret = env.CRON_SECRET;
   const authHeader = request.headers.get("authorization");
 
   if (!secret || authHeader !== `Bearer ${secret}`) {
