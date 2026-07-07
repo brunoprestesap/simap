@@ -263,44 +263,52 @@ function HistoricoSyncSection({ items }: { items: SicamSyncHistoricoItem[] }) {
         Últimas sincronizações
       </p>
       <ul className="divide-y divide-border">
-        {items.map((item) => (
-          <li
-            key={item.id}
-            className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm"
-          >
-            <div className="min-w-0 flex-1">
-              <p className="font-medium text-foreground">
-                {formatDateBR(item.createdAt)}
-                <span className="ml-2 text-xs text-muted-foreground">
-                  por {item.iniciadoPor.nome} ({item.iniciadoPor.matricula})
-                </span>
-              </p>
-              {item.status === "ERRO" && item.mensagemErro && (
-                <p className="mt-0.5 wrap-break-word text-xs text-destructive">
-                  {item.mensagemErro}
+        {items.map((item) => {
+          const iniciadorLabel = item.iniciadoPor
+            ? `por ${item.iniciadoPor.nome} (${item.iniciadoPor.matricula})`
+            : "pelo sistema";
+          return (
+            <li
+              key={item.id}
+              className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm"
+            >
+              <div className="min-w-0 flex-1">
+                <p className="flex flex-wrap items-baseline gap-2 font-medium text-foreground">
+                  {formatDateBR(item.createdAt)}
+                  <span className="text-xs text-muted-foreground">{iniciadorLabel}</span>
+                  {item.automatica && (
+                    <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
+                      Automática
+                    </span>
+                  )}
                 </p>
-              )}
-            </div>
-            <div className="flex items-center gap-3 text-xs text-muted-foreground">
-              <span className="font-mono">
-                {item.totalProcessados.toLocaleString("pt-BR")} processados ·{" "}
-                <span className="text-jf-green">+{item.novos}</span> ·{" "}
-                <span className="text-primary">↻{item.atualizados}</span>
-                {item.erros > 0 && (
-                  <>
-                    {" · "}
-                    <span className="text-destructive">!{item.erros}</span>
-                  </>
+                {item.status === "ERRO" && item.mensagemErro && (
+                  <p className="mt-0.5 wrap-break-word text-xs text-destructive">
+                    {item.mensagemErro}
+                  </p>
                 )}
-              </span>
-              <span
-                className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${SYNC_STATUS_COLOR[item.status]}`}
-              >
-                {SYNC_STATUS_LABEL[item.status]}
-              </span>
-            </div>
-          </li>
-        ))}
+              </div>
+              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                <span className="font-mono">
+                  {item.totalProcessados.toLocaleString("pt-BR")} processados ·{" "}
+                  <span className="text-jf-green">+{item.novos}</span> ·{" "}
+                  <span className="text-primary">↻{item.atualizados}</span>
+                  {item.erros > 0 && (
+                    <>
+                      {" · "}
+                      <span className="text-destructive">!{item.erros}</span>
+                    </>
+                  )}
+                </span>
+                <span
+                  className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${SYNC_STATUS_COLOR[item.status]}`}
+                >
+                  {SYNC_STATUS_LABEL[item.status]}
+                </span>
+              </div>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

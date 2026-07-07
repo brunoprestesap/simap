@@ -39,6 +39,20 @@ vi.mock("@/lib/prisma", () => ({
 vi.mock("@/server/queries/sicam", () => ({
   listarTodosTombosAtivos: vi.fn(),
   buscarHistoricoTermosBatch: vi.fn(),
+  buscarNumerosAlteradosSicam: vi.fn(),
+  buscarTombosSicamPorNumeros: vi.fn(),
+}));
+
+vi.mock("@/server/services/notificacao", () => ({
+  criarNotificacoes: vi.fn(),
+}));
+
+vi.mock("@/server/services/ldap", () => ({
+  buscarEmailsPorMatriculas: vi.fn().mockResolvedValue(new Map()),
+}));
+
+vi.mock("@/server/services/email", () => ({
+  enviarEmail: vi.fn(),
 }));
 
 const mockSync = vi.mocked(listarTodosTombosAtivos);
@@ -116,11 +130,12 @@ describe("executarSincronizacaoSicam", () => {
   it("cria SincronizacaoSicam em EM_ANDAMENTO no início", async () => {
     mockSync.mockResolvedValue(pageResult([]));
 
-    await executarSincronizacaoSicam("user-id");
+    await executarSincronizacaoSicam({ iniciadoPorId: "user-id" });
 
     expect(prisma.sincronizacaoSicam.create).toHaveBeenCalledWith({
       data: {
         iniciadoPorId: "user-id",
+        automatica: false,
         status: "EM_ANDAMENTO",
       },
     });
@@ -129,7 +144,7 @@ describe("executarSincronizacaoSicam", () => {
   it("conclui com status CONCLUIDA quando não há tombos", async () => {
     mockSync.mockResolvedValue(pageResult([]));
 
-    const r = await executarSincronizacaoSicam("user-id");
+    const r = await executarSincronizacaoSicam({ iniciadoPorId: "user-id" });
 
     expect(r.totalProcessados).toBe(0);
     expect(r.novos).toBe(0);
@@ -144,7 +159,7 @@ describe("executarSincronizacaoSicam", () => {
   it("cria Tombo novo quando não existe localmente", async () => {
     mockSync.mockResolvedValue(pageResult([tomboFixture()]));
 
-    const r = await executarSincronizacaoSicam("user-id");
+    const r = await executarSincronizacaoSicam({ iniciadoPorId: "user-id" });
 
     expect(r.novos).toBe(1);
     expect(r.atualizados).toBe(0);
@@ -157,7 +172,7 @@ describe("executarSincronizacaoSicam", () => {
       { id: "existing-t1", numero: "12423" },
     ] as never);
 
-    const r = await executarSincronizacaoSicam("user-id");
+    const r = await executarSincronizacaoSicam({ iniciadoPorId: "user-id" });
 
     expect(r.atualizados).toBe(1);
     expect(r.novos).toBe(0);
@@ -172,7 +187,7 @@ describe("executarSincronizacaoSicam", () => {
     mockSync.mockResolvedValue(pageResult([tomboFixture({ codLotacao: 999 })]));
     vi.mocked(prisma.unidade.create).mockResolvedValue({ id: "u-new" } as never);
 
-    await executarSincronizacaoSicam("user-id");
+    await executarSincronizacaoSicam({ iniciadoPorId: "user-id" });
 
     expect(prisma.unidade.create).toHaveBeenCalledWith({
       data: { codigo: "999", descricao: "999" },
@@ -184,7 +199,7 @@ describe("executarSincronizacaoSicam", () => {
     mockSync.mockResolvedValue(pageResult([tomboFixture({ codLotacao: 999, sarhInativo: true })]));
     vi.mocked(prisma.unidade.create).mockResolvedValue({ id: "u-inativa" } as never);
 
-    await executarSincronizacaoSicam("user-id");
+    await executarSincronizacaoSicam({ iniciadoPorId: "user-id" });
 
     expect(prisma.unidade.create).toHaveBeenCalledWith({
       data: { codigo: "999", descricao: "999", ativo: false },
@@ -196,7 +211,7 @@ describe("executarSincronizacaoSicam", () => {
     mockSync.mockResolvedValue(pageResult([tomboFixture({ codLotacao: 999, sarhInativo: null })]));
     vi.mocked(prisma.unidade.create).mockResolvedValue({ id: "u-sem-sarh" } as never);
 
-    await executarSincronizacaoSicam("user-id");
+    await executarSincronizacaoSicam({ iniciadoPorId: "user-id" });
 
     expect(prisma.unidade.create).toHaveBeenCalledWith({
       data: { codigo: "999", descricao: "999" },
@@ -210,7 +225,7 @@ describe("executarSincronizacaoSicam", () => {
     ] as never);
     mockSync.mockResolvedValue(pageResult([tomboFixture({ sarhInativo: true })]));
 
-    await executarSincronizacaoSicam("user-id");
+    await executarSincronizacaoSicam({ iniciadoPorId: "user-id" });
 
     expect(prisma.unidade.updateMany).toHaveBeenCalledWith({
       where: { codigo: "348", ativo: true },
@@ -229,7 +244,7 @@ describe("executarSincronizacaoSicam", () => {
       ]),
     );
 
-    await executarSincronizacaoSicam("user-id");
+    await executarSincronizacaoSicam({ iniciadoPorId: "user-id" });
 
     const desativacaoCalls = vi.mocked(prisma.unidade.updateMany).mock.calls.filter(
       (call) => call[0].data && (call[0].data as Record<string, unknown>).ativo === false,
@@ -249,7 +264,7 @@ describe("executarSincronizacaoSicam", () => {
       { id: "u-cached", codigo: "348" },
     ] as never);
 
-    await executarSincronizacaoSicam("user-id");
+    await executarSincronizacaoSicam({ iniciadoPorId: "user-id" });
 
     // Não deve criar Unidade — já estava em cache
     expect(prisma.unidade.create).not.toHaveBeenCalled();
@@ -261,7 +276,7 @@ describe("executarSincronizacaoSicam", () => {
       { id: "user-resp", matricula: "AP20192" },
     ] as never);
 
-    await executarSincronizacaoSicam("user-id");
+    await executarSincronizacaoSicam({ iniciadoPorId: "user-id" });
 
     expect(prisma.tombo.create).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -274,7 +289,7 @@ describe("executarSincronizacaoSicam", () => {
     mockSync.mockResolvedValue(pageResult([tomboFixture()]));
     vi.mocked(prisma.usuario.findMany).mockResolvedValue([]);
 
-    await executarSincronizacaoSicam("user-id");
+    await executarSincronizacaoSicam({ iniciadoPorId: "user-id" });
 
     expect(prisma.tombo.create).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -299,7 +314,7 @@ describe("executarSincronizacaoSicam", () => {
       .mockRejectedValueOnce(new Error("constraint violation"))
       .mockResolvedValueOnce({} as never);
 
-    const r = await executarSincronizacaoSicam("user-id");
+    const r = await executarSincronizacaoSicam({ iniciadoPorId: "user-id" });
 
     expect(r.totalProcessados).toBe(2);
     expect(r.novos).toBe(2);
@@ -313,7 +328,7 @@ describe("executarSincronizacaoSicam", () => {
   it("marca como ERRO quando falha global (ex: Oracle fora)", async () => {
     mockSync.mockRejectedValueOnce(new Error("ORA-12541: TNS:no listener"));
 
-    await expect(executarSincronizacaoSicam("user-id")).rejects.toThrow(
+    await expect(executarSincronizacaoSicam({ iniciadoPorId: "user-id" })).rejects.toThrow(
       /ORA-12541/,
     );
 
@@ -335,7 +350,7 @@ describe("executarSincronizacaoSicam", () => {
         pageResult([tomboFixture({ numero: "2" })], 2, 2),
       );
 
-    const r = await executarSincronizacaoSicam("user-id");
+    const r = await executarSincronizacaoSicam({ iniciadoPorId: "user-id" });
 
     expect(mockSync).toHaveBeenCalledTimes(2);
     expect(r.totalProcessados).toBe(2);
@@ -344,7 +359,7 @@ describe("executarSincronizacaoSicam", () => {
   it("usa Tombo.ativo = true ao criar ou atualizar (reativa baixados que voltarem)", async () => {
     mockSync.mockResolvedValue(pageResult([tomboFixture()]));
 
-    await executarSincronizacaoSicam("user-id");
+    await executarSincronizacaoSicam({ iniciadoPorId: "user-id" });
 
     expect(prisma.tombo.create).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -380,7 +395,7 @@ describe("executarSincronizacaoSicam", () => {
       ]);
       mockTermosBatch.mockResolvedValueOnce(termoMap);
 
-      await executarSincronizacaoSicam("user-id");
+      await executarSincronizacaoSicam({ iniciadoPorId: "user-id" });
 
       // 2 chamadas: (1) TERMO atual do tombo (nuTermo=100/2023 do fixture),
       //              (2) TERMO histórico do batch (nuTermo=12/2024 do termoMap)
@@ -412,7 +427,7 @@ describe("executarSincronizacaoSicam", () => {
         new Error("ORA-00942: table or view does not exist"),
       );
 
-      const r = await executarSincronizacaoSicam("user-id");
+      const r = await executarSincronizacaoSicam({ iniciadoPorId: "user-id" });
 
       // Tombo ainda foi processado normalmente
       expect(r.totalProcessados).toBe(1);
@@ -453,7 +468,7 @@ describe("executarSincronizacaoSicam", () => {
         new Error("constraint"),
       );
 
-      const r = await executarSincronizacaoSicam("user-id");
+      const r = await executarSincronizacaoSicam({ iniciadoPorId: "user-id" });
 
       // Tombo foi processado; erro de TERMO não conta no contador principal
       expect(r.erros).toBe(0);
@@ -463,7 +478,7 @@ describe("executarSincronizacaoSicam", () => {
     it("não chama buscarHistoricoTermosBatch quando página não tem tombos", async () => {
       mockSync.mockResolvedValue(pageResult([]));
 
-      await executarSincronizacaoSicam("user-id");
+      await executarSincronizacaoSicam({ iniciadoPorId: "user-id" });
 
       expect(mockTermosBatch).not.toHaveBeenCalled();
     });

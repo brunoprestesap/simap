@@ -29,6 +29,7 @@ enum TipoNotificacao {
   CONFIRMACAO_REALIZADA
   REGISTRO_SICAM
   IMPORTACAO_CSV
+  SINCRONIZACAO_SICAM
 }
 
 enum StatusSincronizacaoSicam {
@@ -246,11 +247,12 @@ model SincronizacaoSicam {
   erros            Int                      @default(0)
   mensagemErro     String?
   finalizadoEm     DateTime?
-  iniciadoPorId    String
+  iniciadoPorId    String?
+  automatica       Boolean                  @default(false)
   createdAt        DateTime                 @default(now())
   updatedAt        DateTime                 @updatedAt
 
-  iniciadoPor Usuario @relation(fields: [iniciadoPorId], references: [id])
+  iniciadoPor Usuario? @relation(fields: [iniciadoPorId], references: [id])
 
   @@index([iniciadoPorId])
   @@index([createdAt])

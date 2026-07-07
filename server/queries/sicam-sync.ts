@@ -8,7 +8,8 @@ export interface SicamSyncHistoricoItem {
   atualizados: number;
   erros: number;
   mensagemErro: string | null;
-  iniciadoPor: { nome: string; matricula: string };
+  automatica: boolean;
+  iniciadoPor: { nome: string; matricula: string } | null;
   createdAt: Date;
   finalizadoEm: Date | null;
 }
@@ -37,7 +38,8 @@ export async function listarHistoricoSincronizacoesSicam(
     atualizados: s.atualizados,
     erros: s.erros,
     mensagemErro: s.mensagemErro,
-    iniciadoPor: s.iniciadoPor,
+    automatica: s.automatica,
+    iniciadoPor: s.iniciadoPor ?? null,
     createdAt: s.createdAt,
     finalizadoEm: s.finalizadoEm,
   }));

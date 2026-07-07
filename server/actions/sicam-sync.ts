@@ -40,7 +40,7 @@ export async function sincronizarComSicam(): Promise<SincronizarComSicamResult> 
   }
 
   try {
-    const resultado = await executarSincronizacaoSicam(user.id);
+    const resultado = await executarSincronizacaoSicam({ iniciadoPorId: user.id });
 
     await registrarAuditoria(
       "SINCRONIZACAO_SICAM",

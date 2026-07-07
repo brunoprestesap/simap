@@ -6,6 +6,7 @@ import {
   FileSpreadsheet,
   FileText,
   Package,
+  RefreshCw,
 } from "lucide-react";
 import type { ElementType } from "react";
 
@@ -16,6 +17,7 @@ export const NOTIFICACAO_ICONS: Record<TipoNotificacao, ElementType> = {
   CONFIRMACAO_REALIZADA: CheckCircle2,
   REGISTRO_SICAM: ClipboardCheck,
   IMPORTACAO_CSV: FileSpreadsheet,
+  SINCRONIZACAO_SICAM: RefreshCw,
 };
 
 /** Labels legíveis para perfis de usuário. */

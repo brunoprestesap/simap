@@ -67,6 +67,12 @@ const envSchema = z.object({
   SICAM_ORACLE_INSTANT_CLIENT_DIR: z.string().optional(),
   SICAM_ORACLE_CONFIG_DIR: z.string().optional(),
 
+  // Cron
+  CRON_SECRET: z
+    .string()
+    .min(32, "CRON_SECRET deve ter pelo menos 32 caracteres")
+    .optional(),
+
   // Postgres / Backup
   POSTGRES_USER: z.string().optional(),
   POSTGRES_PASSWORD: z.string().optional(),

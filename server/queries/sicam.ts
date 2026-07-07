@@ -577,6 +577,102 @@ export async function buscarHistoricoTermosBatch(
   return resultado;
 }
 
+// =====================================================================
+// Sync diferencial — identifica tombos alterados desde uma data e
+// busca dados completos apenas para esse subconjunto.
+// =====================================================================
+
+/**
+ * Retorna os números de tombo que tiveram algum evento de transferência
+ * (HISTORICO_TOMBO.TIPO_OPERACAO='E') registrado após `desde`.
+ *
+ * Usado pelo sync diferencial para limitar o upsert apenas aos tombos
+ * que efetivamente mudaram de lotação/responsável desde o último sync.
+ * Tombos com alterações apenas de descrição/fornecedor (sem mudança de TERMO)
+ * não aparecem aqui — serão capturados pelo sync completo semanal automático.
+ */
+export async function buscarNumerosAlteradosSicam(
+  desde: Date,
+  options: { timeoutMs?: number } = {},
+): Promise<string[]> {
+  const sql = `
+    SELECT DISTINCT TO_CHAR(NU_TOMBO) AS NU_TOMBO
+    FROM HISTORICO_TOMBO
+    WHERE DT_CRIACAO >= :desde
+      AND TIPO_OPERACAO = 'E'
+      AND NU_TERMO IS NOT NULL
+    ORDER BY 1
+  `;
+
+  const result = await executeSicamQuery<{ NU_TOMBO: string }>(
+    sql,
+    { desde },
+    options.timeoutMs ? { timeoutMs: options.timeoutMs } : {},
+  );
+
+  return (result.rows ?? []).map((r) => String(r.NU_TOMBO));
+}
+
+// Limite de placeholders por sub-lote para respeitar ORA-01795 (max 1000 IN).
+const DIFF_BATCH_SIZE = 100;
+
+/**
+ * Busca dados completos (SicamTombo) para uma lista específica de tombos.
+ *
+ * Reutiliza `TOMBO_COLUMNS_SQL` e a mesma estrutura de JOIN de
+ * `listarTodosTombosAtivos`, mas com filtro `WHERE t.NU_TOMBO IN (...)`.
+ * Sub-lotes de 100 para respeitar o limite de IN clause do Oracle.
+ *
+ * Tombos não encontrados (baixados, do tipo livro, sem TERMO) são omitidos
+ * — comportamento idêntico ao sync completo.
+ */
+export async function buscarTombosSicamPorNumeros(
+  numeros: string[],
+  options: { timeoutMs?: number } = {},
+): Promise<SicamTombo[]> {
+  if (numeros.length === 0) return [];
+
+  const queryOptions = options.timeoutMs ? { timeoutMs: options.timeoutMs } : {};
+  const tombos: SicamTombo[] = [];
+
+  for (let i = 0; i < numeros.length; i += DIFF_BATCH_SIZE) {
+    const sublote = numeros.slice(i, i + DIFF_BATCH_SIZE);
+    const placeholders = sublote.map((_, idx) => `:n${idx}`).join(",");
+    const binds: Record<string, number> = Object.fromEntries(
+      sublote.map((n, idx) => [`n${idx}`, Number(n)]),
+    );
+
+    const sql = `
+      SELECT ${TOMBO_COLUMNS_SQL}
+      FROM TOMBO t
+        INNER JOIN MATERIAL m
+          ON m.CO_MAT = t.CO_MAT
+        INNER JOIN TERMO tr
+          ON tr.NU_TERMO = t.NU_TERMO
+         AND tr.AN_TERMO = t.AN_TERMO
+         AND tr.TI_TERMO = t.TI_TERMO
+        LEFT JOIN PATRIMONIO_SETOR ps
+          ON ps.CO_LOTA  = tr.CO_LOTA
+         AND ps.CO_SETOR = tr.CO_SETOR
+        LEFT JOIN (
+          SELECT LOTA_COD_LOTACAO, LOTA_DSC_LOTACAO, LOTA_SIGLA_LOTACAO, LOTA_DAT_FIM,
+                 ROW_NUMBER() OVER (PARTITION BY LOTA_COD_LOTACAO
+                                   ORDER BY LOTA_DAT_FIM DESC NULLS FIRST) rn
+          FROM SARH.RH_LOTACAO
+        ) rl ON rl.LOTA_COD_LOTACAO = tr.CO_LOTA AND rl.rn = 1
+      WHERE t.NU_TOMBO IN (${placeholders})
+        AND t.TI_TOMBO != 'L'
+        AND t.IN_SAIDA  = 1
+      ORDER BY t.NU_TOMBO
+    `;
+
+    const result = await executeSicamQuery<SicamTomboRow>(sql, binds, queryOptions);
+    tombos.push(...(result.rows ?? []).map(mapTomboRow));
+  }
+
+  return tombos;
+}
+
 /**
  * Lista tombos ativos vinculados a uma lotação no SICAM, com paginação
  * server-side. Usa INNER JOIN com TERMO — o caso ~0,02% sem termo não
