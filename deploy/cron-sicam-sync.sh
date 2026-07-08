@@ -30,14 +30,14 @@ fi
 
 echo "[$(date -Iseconds)] Iniciando sync SICAM automático..." >> "$LOG_FILE"
 
-HTTP_STATUS=$(curl -sf \
+HTTP_STATUS=$(curl -sk \
   --write-out "%{http_code}" \
   --output /tmp/simap-cron-response.json \
   -X POST "${APP_URL}/api/cron/sicam-sync" \
   -H "Authorization: Bearer ${CRON_SECRET}" \
   -H "Content-Type: application/json" \
   --max-time 600 \
-  2>> "$LOG_FILE" || echo "000")
+  2>> "$LOG_FILE") || HTTP_STATUS="000"
 
 RESPONSE=$(cat /tmp/simap-cron-response.json 2>/dev/null || echo "{}")
 
