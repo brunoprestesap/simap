@@ -38,7 +38,15 @@ docker compose up -d     # Start PostgreSQL (port 5432, user/pass/db: simap)
 - **Writes:** `server/actions/` — Server Actions with `'use server'`, validated with Zod, return `{ success, data?, error? }`
 - **Services:** `server/services/` — email, CSV parser, LDAP, audit logging, notifications
 
+**Lib utilities:**
+- `lib/env.ts` — validates all env vars with Zod at startup; always import from here, never from `process.env` directly
+- `lib/permissions/movimentacao-confirmacao.ts` — ACL rules for who can confirm each movimentação
+- `lib/query-builders.ts` — reusable Prisma `where` clause builders for common filter patterns
+- `lib/hooks/` — client-side hooks: `use-admin-crud`, `use-admin-form`, `use-debounced-callback`, `use-toast`, `use-url-params`, `use-tombo-selection`, `use-click-outside`, `use-column-resize`
+
 **Prisma:** Generated client outputs to `lib/generated/prisma/`. Schema at `prisma/schema.prisma`. IDs use `cuid()`.
+
+**Movimentação status flow:** `PENDENTE_CONFIRMACAO` → `CONFIRMADA_DESTINO` → `REGISTRADA_SICAM`. Transitions are one-way and irreversible; ACL enforced by `lib/permissions/movimentacao-confirmacao.ts`.
 
 **Navigation:** Profile-based — each of the 4 profiles (`PerfilUsuario` enum) sees different nav items. Defined in `lib/types.ts` (`NAV_ITEMS_BY_PROFILE`). Layout components in `components/layout/`.
 
@@ -52,7 +60,7 @@ docker compose up -d     # Start PostgreSQL (port 5432, user/pass/db: simap)
 ## Key rules
 
 - **Server Components are the default.** Only use `'use client'` for: scanner, interactive forms, bottom sheet, search dropdowns, Recharts charts, notification polling, toasts.
-- **All mutations via Server Actions**, never API Routes (only exception: `api/auth/[...nextauth]`).
+- **All mutations via Server Actions**, never API Routes (only exceptions: `api/auth/[...nextauth]` and `api/health`).
 - **AuditLog is immutable** — INSERT only, never UPDATE or DELETE. No `onDelete: Cascade` on AuditLog relations.
 - **Validate all inputs with Zod** on both client and server.
 - **Server Actions return result objects** `{ success: boolean, data?: T, error?: string }` — never throw for expected errors.
@@ -63,6 +71,17 @@ docker compose up -d     # Start PostgreSQL (port 5432, user/pass/db: simap)
 - **Server-side pagination** for all listings (20-50 items). Virtualize lists > 100 items.
 - **Debounce 300ms** on search fields.
 - Use `import type` for type imports.
+- **Rate limiting:** 5 login attempts per `matricula` in 60s; 10 per IP in 15min — in-memory via `lib/rate-limit.ts` (resets on server restart).
+- **Node.js minimum:** 20.11+. Oracle Instant Client optional; required for SICAM Oracle thick mode (legacy password verifier) — configure via `ORACLE_CLIENT_PATH`.
+
+## Security headers
+
+Configured in `next.config.ts`:
+- **CSP:** `default-src 'self'`; `script-src 'self' 'unsafe-inline'`; `style-src 'self' 'unsafe-inline'` — `unsafe-inline` required for Tailwind 4 (nonces would be ideal but need refactor)
+- **X-Frame-Options:** DENY
+- **X-Content-Type-Options:** nosniff
+- **Referrer-Policy:** strict-origin-when-cross-origin
+- **HSTS:** `max-age=31536000` in production only
 
 ## Visual identity
 
@@ -75,7 +94,8 @@ docker compose up -d     # Start PostgreSQL (port 5432, user/pass/db: simap)
 ## Testing
 
 - **Vitest** (jsdom): unit tests in `__tests__/` dirs or `*.test.{ts,tsx}` files. Setup in `vitest.setup.ts`. Path alias `@` resolves to project root.
-- **Playwright**: E2E tests in `e2e/` directory.
+- **Playwright**: E2E tests in `e2e/` directory. Chromium only. `reuseExistingServer` on port 3000 (dev). 1 retry local / 2 retries CI. `globalSetup` at `e2e/global-setup.ts` seeds test users directly in DB.
+- **E2E LDAP bypass:** set `LDAP_URL=""` in test env to skip LDAP and authenticate via DB credentials only.
 - Mock LDAP and SMTP in integration tests — never connect to real services.
 - Test names in Portuguese, descriptive: `it('deve registrar movimentação com múltiplos tombos')`.
 
@@ -84,6 +104,22 @@ docker compose up -d     # Start PostgreSQL (port 5432, user/pass/db: simap)
 - **Onda 1 (Core):** Auth, CSV import (now contingency fallback), scanner, movement registration, email notifications, public confirmation, audit
 - **Onda 2 (Operational):** SEMAP backlog, SICAM registration, "my assets" view, admin CRUD, in-app notifications, history; **SICAM Oracle sync (Fase 1 concluída 2026-05-12)** replaces CSV as primary data source
 - **Onda 3 (Managerial):** Dashboard KPIs, Recharts charts, audit reports, sync history
+
+## Context files (read before working on a feature)
+
+`context/` holds the authoritative agent context. Read the relevant files before starting any task:
+
+| File | When to read |
+|------|-------------|
+| [`context/project-overview.md`](context/project-overview.md) | Understanding the product, user flows, in/out of scope |
+| [`context/architecture.md`](context/architecture.md) | Stack, folder structure, inviolable architectural rules |
+| [`context/build-plan.md`](context/build-plan.md) | Full feature roadmap by phase — what exists, what's next |
+| [`context/code-standards.md`](context/code-standards.md) | TypeScript/Next.js conventions, naming, error handling, test patterns |
+| [`context/library-docs.md`](context/library-docs.md) | How each library is used *in this project* specifically |
+| [`context/ui-tokens.md`](context/ui-tokens.md) | Colors, spacing, typography as CSS variables — source of truth for design tokens |
+| [`context/ui-rules.md`](context/ui-rules.md) | Visual behavior: buttons, cards, layout, states |
+| [`context/ui-registry.md`](context/ui-registry.md) | Existing component patterns — check before creating new UI; update after adding reusable patterns |
+| [`context/progress-tracker.md`](context/progress-tracker.md) | Which features are done vs. pending — update when a feature is completed |
 
 ## Detailed docs
 
